@@ -453,27 +453,19 @@ def build_minimax_r2v(prompt, width, height, frames, seed, fps=24, ref_images=()
     model = _mm_common(g, turbo, MODELS["mm_unet_ref"], MODELS["mm_lora_ref_turbo"])
     cond = {"clip": ["clip", 0], "vae": ["vae", 0], "audio_vae": ["audio_vae", 0], "prompt": prompt,
             "width": width, "height": height, "length": int(frames), "ref_image_size": ref_image_size}
-    # Reference inputs are batched: chain ImageBatch for images; LoadVideo/LoadAudio for the rest.
-    prev = None
+    # The node uses auto-growing inputs: one dotted input per reference (as in the bundled r2v template),
+    # e.g. ref_images.ref_image_0, ref_videos.ref_video_0 (+ ref_video_audios.ref_video_audio_0), ref_audios.ref_audio_0.
     for i, name in enumerate(ref_images[:9]):
         g[f"ref_img{i}"] = {"class_type": "LoadImage", "inputs": {"image": name}}
-        cur = [f"ref_img{i}", 0]
-        if prev is not None:
-            g[f"ref_imgbatch{i}"] = {"class_type": "ImageBatch", "inputs": {"image1": prev, "image2": cur}}
-            cur = [f"ref_imgbatch{i}", 0]
-        prev = cur
-    if prev is not None:
-        cond["ref_images"] = prev
+        cond[f"ref_images.ref_image_{i}"] = [f"ref_img{i}", 0]
     for i, name in enumerate(ref_videos[:3]):
         g[f"ref_vid{i}"] = {"class_type": "LoadVideo", "inputs": {"file": name}}
         g[f"ref_vidc{i}"] = {"class_type": "GetVideoComponents", "inputs": {"video": [f"ref_vid{i}", 0]}}
-        if i == 0:
-            cond["ref_videos"] = [f"ref_vidc{i}", 0]
-            cond["ref_video_audios"] = [f"ref_vidc{i}", 1]
+        cond[f"ref_videos.ref_video_{i}"] = [f"ref_vidc{i}", 0]
+        cond[f"ref_video_audios.ref_video_audio_{i}"] = [f"ref_vidc{i}", 1]
     for i, name in enumerate(ref_audios[:3]):
         g[f"ref_aud{i}"] = {"class_type": "LoadAudio", "inputs": {"audio": name}}
-        if i == 0:
-            cond["ref_audios"] = [f"ref_aud{i}", 0]
+        cond[f"ref_audios.ref_audio_{i}"] = [f"ref_aud{i}", 0]
     g["cond"] = {"class_type": "MiniMaxH3ReferenceToVideo", "inputs": cond}
     _mm_sample_and_save(g, model, steps or (4 if turbo else 20), seed, fps, filename_prefix)
     return g
@@ -623,6 +615,9 @@ def final_size(mode, graph):
     if "latent1" in graph:
         i = graph["latent1"]["inputs"]
         return i["width"] * 2, i["height"] * 2
+    if "latent" not in graph and "cond" in graph:   # MiniMax H3: the conditioning node makes the latent
+        i = graph["cond"]["inputs"]
+        return i["width"], i["height"]
     if graph["latent"]["class_type"] == "VAEEncode":
         i = graph["img_fit"]["inputs"]
     else:
