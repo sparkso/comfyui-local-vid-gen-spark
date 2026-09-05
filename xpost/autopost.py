@@ -200,6 +200,19 @@ def xquik_up(key):
     return st == 200
 
 
+def hand_off(s, st, item, reason):
+    """Browser automation cannot attach video on x.com, so when the API cannot post, the clip goes to the owner
+    on Telegram with its caption and LEAVES the queue: the owner posts it by hand, and it can never double-post."""
+    local = STATE_DIR / Path(item["media_url"]).name
+    cap = f"{reason}. This clip is yours to post by hand now (it will NOT auto-post later).\n\n{item['text']}"
+    if local.exists() and telegram_video(s["tg"], local, cap):
+        st["queue"].remove(item)
+        st["posted"].append(dict(item, manual=f"handed to owner via Telegram {now()}"))
+        log(f"HANDED OFF {item['slug']} to Telegram for manual posting")
+        return True
+    return False
+
+
 # ----------------------------------------------------------------------------- main
 def main():
     ap = argparse.ArgumentParser()
@@ -244,27 +257,14 @@ def main():
                     log(f"DROPPED {item['slug']}: {msg}")
                     telegram(s["tg"], f"xpost dropped {item['slug']} (X refused): {msg[:200]}")
                 else:
-                    log(f"POST FAILED (will retry) {item['slug']}: {msg}")
-                    if not item.get("dm_sent"):
-                        local = STATE_DIR / Path(item["media_url"]).name
-                        cap = f"Xquik write failed ({msg[:80]}). Post this one by hand?\n\n{item['text']}"
-                        if local.exists() and telegram_video(s["tg"], local, cap):
-                            item["dm_sent"] = now()
-                            log(f"DM'd clip {item['slug']} to Telegram for manual posting")
+                    log(f"POST FAILED {item['slug']}: {msg}")
+                    hand_off(s, st, item, f"Xquik write failed ({msg[:80]})")
         else:
             if not st.get("xquik_down_since"):
                 st["xquik_down_since"] = now()
                 telegram(s["tg"], f"xpost: Xquik not answering; {len(st['queue'])} clip(s) queued. Will keep rendering hourly and post when it recovers.")
             log(f"xquik down, {len(st['queue'])} queued")
-            # Browser automation cannot attach video on x.com, so the fallback is a manual post:
-            # send the owner the clip + caption once, they post it from the phone in seconds.
-            item = st["queue"][0]
-            if not item.get("dm_sent"):
-                local = STATE_DIR / Path(item["media_url"]).name
-                cap = f"Xquik is down. Post this one by hand?\n\n{item['text']}"
-                if local.exists() and telegram_video(s["tg"], local, cap):
-                    item["dm_sent"] = now()
-                    log(f"DM'd clip {item['slug']} to Telegram for manual posting")
+            hand_off(s, st, st["queue"][0], "Xquik is down")
         save_state(st)
     if a.post_only:
         return 0
