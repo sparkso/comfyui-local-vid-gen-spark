@@ -558,6 +558,49 @@ def api_submit():
         return jsonify({"error": str(e)}), 502
 
 
+@app.post("/api/jobs/r2v")
+def api_r2v():
+    """MiniMax H3 reference-to-video: multipart with prompt/width/height/frames/seed/turbo plus repeated
+    ref_images / ref_videos / ref_audios file fields. Refer to them in the prompt as <Picture 1>, <Video 1>, <Audio 1>."""
+    f = request.form
+    try:
+        prompt = f["prompt"].strip()
+        if not prompt:
+            return jsonify({"error": "prompt is empty"}), 400
+        width, height = int(f.get("width", 480)), int(f.get("height", 832))
+        frames = int(f.get("frames", 124))
+        seed = int(f["seed"]) if f.get("seed") not in (None, "", "-1") else int.from_bytes(os.urandom(6), "big")
+        turbo = f.get("turbo", "1") != "0"
+        names = {"ref_images": [], "ref_videos": [], "ref_audios": []}
+        for key in names:
+            for up in request.files.getlist(key):
+                if not up or not up.filename:
+                    continue
+                ext = Path(up.filename).suffix.lower() or ".bin"
+                local = UPLOADS / f"ref-{uuid.uuid4().hex[:8]}{ext}"
+                up.save(local)
+                names[key].append(comfy_upload_file(local))
+        if not any(names.values()):
+            return jsonify({"error": "add at least one reference image, video or audio"}), 400
+        job_id = datetime.now().strftime("%Y%m%d-%H%M%S") + "-r2v" + uuid.uuid4().hex[:2]
+        graph = workflows.build_minimax_r2v(prompt, width, height, frames, seed, turbo=turbo,
+                                            ref_image_size=f.get("ref_image_size", "match"),
+                                            ref_images=names["ref_images"], ref_videos=names["ref_videos"],
+                                            ref_audios=names["ref_audios"], filename_prefix=f"video/localvidgen/{job_id}")
+        prompt_id = comfy_submit(graph)
+    except (KeyError, ValueError) as e:
+        return jsonify({"error": f"bad request: {e}"}), 400
+    except (requests.RequestException, RuntimeError) as e:
+        return jsonify({"error": str(e)}), 502
+    job = {"id": job_id, "prompt_id": prompt_id, "status": "queued", "created_at": now_iso(),
+           "mode": "minimax_r2v", "task": "r2v", "output": "video", "prompt": prompt, "negative": "",
+           "width": width, "height": height, "frames": frames, "fps": 24, "seed": seed,
+           "image": (names["ref_images"] or [None])[0], "refs": names}
+    STORE.add(job)
+    log(f"submitted {job_id} -> prompt {prompt_id} (minimax_r2v, refs {[len(v) for v in names.values()]})")
+    return jsonify(job)
+
+
 @app.post("/api/jobs/<job_id>/rerun")
 def api_rerun(job_id):
     j = STORE.get(job_id) or abort(404)

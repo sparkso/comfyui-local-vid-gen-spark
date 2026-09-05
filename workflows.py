@@ -49,6 +49,13 @@ MODELS = {
     "ltx25_audio_vae": "ltx-2.5-audio-vae-bf16.safetensors",
     "ltx25_text_encoder": "gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
     "ltx25_upscaler": "ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors",
+    "mm_unet": "minimax_h3_fl2va_pruned_int8_convrot.safetensors",
+    "mm_unet_ref": "minimax_h3_ref2va_pruned_int8_convrot.safetensors",
+    "mm_clip": "qwen3vl_32b_minimax_h3_nvfp4_awq.safetensors",
+    "mm_video_vae": "minimax_h3_video_vae_fp16.safetensors",
+    "mm_audio_vae": "minimax_h3_audio_vae_fp32.safetensors",
+    "mm_lora_turbo": "minimax_h3_fl2v_turbo_8step_v1.0_comfyui_bf16.safetensors",
+    "mm_lora_ref_turbo": "minimax_h3_ref2v_turbo_4step_v0.1_comfyui_bf16.safetensors",
 }
 
 LTX25_STAGE1_SIGMAS = "1.0, 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0"
@@ -60,6 +67,7 @@ TASKS = {
     "t2v": "Text → Video",
     "i2i": "Image → Image",
     "i2v": "Image → Video",
+    "r2v": "References → Video",
 }
 
 _LTX_SIZES = [
@@ -91,11 +99,24 @@ _IMAGE_SIZES = [
     ["Portrait 1088×1920", 1088, 1920],
 ]
 _LTX_FRAMES = [49, 73, 97, 121, 145, 169, 193, 217, 241]
+# MiniMax H3: 24 fps on a 17k+5 frame grid; native 1344x768 but ~0.4 MP is what fits a 24 GB card comfortably.
+_MM_SIZES = [
+    ["Portrait 480×832", 480, 832],
+    ["Landscape 832×480", 832, 480],
+    ["Square 640×640", 640, 640],
+    ["Portrait 544×960", 544, 960],
+    ["Landscape 960×544", 960, 544],
+]
+_MM_FRAMES = [73, 124, 192, 243, 362]   # ~3 s, 5 s, 8 s, 10 s, 15 s
 _WAN_FRAMES = [41, 61, 81, 101, 121, 141, 161]
 
 # Presets shown in the UI. width/height are the FINAL output size.
 PRESETS = {
     # ---- text -> video
+    "minimax_t2v": {"task": "t2v", "label": "MiniMax H3 (audio, dialogue) · turbo 6-step", "sizes": _MM_SIZES,
+                    "frames": _MM_FRAMES, "default_frames": 124, "fps": 24, "needs_image": False, "output": "video"},
+    "minimax_t2v_hq": {"task": "t2v", "label": "MiniMax H3 (audio, dialogue) · 20-step", "sizes": _MM_SIZES,
+                       "frames": _MM_FRAMES, "default_frames": 124, "fps": 24, "needs_image": False, "output": "video"},
     "ltx25_t2v": {"task": "t2v", "label": "LTX-2.5 22B distilled (audio)", "sizes": _LTX_SIZES,
                   "frames": _LTX_FRAMES, "default_frames": 121, "fps": 24, "needs_image": False, "output": "video"},
     "ltx2_t2v": {"task": "t2v", "label": "LTX-2 19B distilled (audio, fast)", "sizes": _LTX_SIZES,
@@ -107,6 +128,8 @@ PRESETS = {
     "wan22_5b_t2v": {"task": "t2v", "label": "Wan 2.2 5B TI2V · 16-step", "sizes": _WAN5_VIDEO_SIZES,
                      "frames": _WAN_FRAMES, "default_frames": 121, "fps": 24, "needs_image": False, "output": "video"},
     # ---- image -> video
+    "minimax_i2v": {"task": "i2v", "label": "MiniMax H3 (audio, dialogue) · turbo 6-step", "sizes": _MM_SIZES,
+                    "frames": _MM_FRAMES, "default_frames": 124, "fps": 24, "needs_image": True, "output": "video"},
     "ltx25_i2v": {"task": "i2v", "label": "LTX-2.5 22B distilled (audio)", "sizes": _LTX_SIZES,
                   "frames": _LTX_FRAMES, "default_frames": 121, "fps": 24, "needs_image": True, "output": "video"},
     "ltx2_i2v": {"task": "i2v", "label": "LTX-2 19B distilled (audio, fast)", "sizes": _LTX_SIZES,
@@ -122,6 +145,10 @@ PRESETS = {
     "wan22_i2i": {"task": "i2i", "label": "Wan 2.2 14B low-noise · img2img (strength)", "sizes": _IMAGE_SIZES,
                   "frames": [1], "default_frames": 1, "fps": 1, "needs_image": True, "output": "image",
                   "has_strength": True},
+    # ---- references -> video (MiniMax H3 ref2va; handled by /api/jobs/r2v, not the generic submit)
+    "minimax_r2v": {"task": "r2v", "label": "MiniMax H3 reference-to-video · turbo 4-step", "sizes": _MM_SIZES,
+                    "frames": _MM_FRAMES, "default_frames": 124, "fps": 24, "needs_image": False, "output": "video",
+                    "r2v": True},
     # ---- post-process (not shown in the task picker)
     "faceswap": {"task": "fix", "label": "ReActor face swap (inswapper_128 + GFPGAN)", "sizes": [],
                  "frames": [1], "default_frames": 1, "fps": 0, "needs_image": True, "output": "video", "hidden": True},
@@ -363,6 +390,95 @@ def build_ltx25_i2v(prompt, image, width, height, frames, seed, fps=24, negative
     return g
 
 
+# ----------------------------------------------------------------------------- MiniMax H3
+def mm_length(seconds):
+    """H3 frame grid at 24 fps: length must be 17k+5 (template: max(5, round(s*24)) + (5 - (n % 17)) % 17)."""
+    n = max(5, round(float(seconds) * 24))
+    return n + (5 - (n % 17)) % 17
+
+
+def _mm_common(g, turbo, unet, lora):
+    g["unet"] = {"class_type": "UNETLoader", "inputs": {"unet_name": unet, "weight_dtype": "default"}}
+    g["clip"] = {"class_type": "CLIPLoader", "inputs": {"clip_name": MODELS["mm_clip"], "type": "minimax", "device": "default"}}
+    g["vae"] = {"class_type": "VAELoader", "inputs": {"vae_name": MODELS["mm_video_vae"]}}
+    g["audio_vae"] = {"class_type": "VAELoader", "inputs": {"vae_name": MODELS["mm_audio_vae"]}}
+    if turbo:
+        g["lora"] = {"class_type": "LoraLoaderModelOnly", "inputs": {"model": ["unet", 0], "lora_name": lora, "strength_model": 1.0}}
+        return ["lora", 0]
+    return ["unet", 0]
+
+
+def _mm_sample_and_save(g, model, steps, seed, fps, filename_prefix):
+    g["sched"] = {"class_type": "BasicScheduler", "inputs": {"model": model, "scheduler": "simple", "steps": int(steps), "denoise": 1.0}}
+    g["sampler"] = {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "res_multistep"}}
+    g["guider"] = {"class_type": "BasicGuider", "inputs": {"model": model, "conditioning": ["cond", 0]}}
+    g["noise"] = {"class_type": "RandomNoise", "inputs": {"noise_seed": int(seed)}}
+    g["samp"] = {"class_type": "SamplerCustomAdvanced",
+                 "inputs": {"noise": ["noise", 0], "guider": ["guider", 0], "sampler": ["sampler", 0],
+                            "sigmas": ["sched", 0], "latent_image": ["cond", 1]}}
+    g["decode"] = {"class_type": "VAEDecode", "inputs": {"samples": ["samp", 0], "vae": ["vae", 0]}}
+    g["adecode"] = {"class_type": "VAEDecodeAudio", "inputs": {"samples": ["samp", 0], "vae": ["audio_vae", 0]}}
+    g["video"] = {"class_type": "CreateVideo", "inputs": {"images": ["decode", 0], "audio": ["adecode", 0], "fps": float(fps)}}
+    g["save"] = {"class_type": "SaveVideo",
+                 "inputs": {"video": ["video", 0], "filename_prefix": filename_prefix, "format": "auto", "codec": "auto"}}
+
+
+def build_minimax_t2v(prompt, width, height, frames, seed, fps=24, image=None, last_image=None, turbo=True,
+                      steps=None, filename_prefix="video/localvidgen/job", **_):
+    """Text / first-frame / first+last-frame to video. `frames` is already on the 17k+5 grid (see PRESETS)."""
+    width, height = _snap(width, 32, 256), _snap(height, 32, 256)
+    g = {}
+    model = _mm_common(g, turbo, MODELS["mm_unet"], MODELS["mm_lora_turbo"])
+    cond = {"clip": ["clip", 0], "vae": ["vae", 0], "prompt": prompt, "width": width, "height": height, "length": int(frames)}
+    if image:
+        g["img"] = {"class_type": "LoadImage", "inputs": {"image": image}}
+        g["img_fit"] = {"class_type": "ImageScale",
+                        "inputs": {"image": ["img", 0], "upscale_method": "lanczos", "width": width, "height": height, "crop": "center"}}
+        cond["first_frame"] = ["img_fit", 0]
+    if last_image:
+        g["img_last"] = {"class_type": "LoadImage", "inputs": {"image": last_image}}
+        g["img_last_fit"] = {"class_type": "ImageScale",
+                             "inputs": {"image": ["img_last", 0], "upscale_method": "lanczos", "width": width, "height": height, "crop": "center"}}
+        cond["last_frame"] = ["img_last_fit", 0]
+    g["cond"] = {"class_type": "MiniMaxH3ImageToVideo", "inputs": cond}
+    _mm_sample_and_save(g, model, steps or (6 if turbo else 20), seed, fps, filename_prefix)
+    return g
+
+
+def build_minimax_r2v(prompt, width, height, frames, seed, fps=24, ref_images=(), ref_videos=(), ref_audios=(),
+                      turbo=True, steps=None, ref_image_size="match", filename_prefix="video/localvidgen/job", **_):
+    """Reference-to-video: up to 9 images, 3 videos, 3 audio clips, referenced in the prompt as <Picture 1>, <Video 1>, <Audio 1>."""
+    width, height = _snap(width, 32, 256), _snap(height, 32, 256)
+    g = {}
+    model = _mm_common(g, turbo, MODELS["mm_unet_ref"], MODELS["mm_lora_ref_turbo"])
+    cond = {"clip": ["clip", 0], "vae": ["vae", 0], "audio_vae": ["audio_vae", 0], "prompt": prompt,
+            "width": width, "height": height, "length": int(frames), "ref_image_size": ref_image_size}
+    # Reference inputs are batched: chain ImageBatch for images; LoadVideo/LoadAudio for the rest.
+    prev = None
+    for i, name in enumerate(ref_images[:9]):
+        g[f"ref_img{i}"] = {"class_type": "LoadImage", "inputs": {"image": name}}
+        cur = [f"ref_img{i}", 0]
+        if prev is not None:
+            g[f"ref_imgbatch{i}"] = {"class_type": "ImageBatch", "inputs": {"image1": prev, "image2": cur}}
+            cur = [f"ref_imgbatch{i}", 0]
+        prev = cur
+    if prev is not None:
+        cond["ref_images"] = prev
+    for i, name in enumerate(ref_videos[:3]):
+        g[f"ref_vid{i}"] = {"class_type": "LoadVideo", "inputs": {"file": name}}
+        g[f"ref_vidc{i}"] = {"class_type": "GetVideoComponents", "inputs": {"video": [f"ref_vid{i}", 0]}}
+        if i == 0:
+            cond["ref_videos"] = [f"ref_vidc{i}", 0]
+            cond["ref_video_audios"] = [f"ref_vidc{i}", 1]
+    for i, name in enumerate(ref_audios[:3]):
+        g[f"ref_aud{i}"] = {"class_type": "LoadAudio", "inputs": {"audio": name}}
+        if i == 0:
+            cond["ref_audios"] = [f"ref_aud{i}", 0]
+    g["cond"] = {"class_type": "MiniMaxH3ReferenceToVideo", "inputs": cond}
+    _mm_sample_and_save(g, model, steps or (4 if turbo else 20), seed, fps, filename_prefix)
+    return g
+
+
 # ----------------------------------------------------------------------------- Wan 2.2 14B
 def _wan14_common(g, prompt, negative):
     g["clip"] = {"class_type": "CLIPLoader", "inputs": {"clip_name": MODELS["wan_clip"], "type": "wan", "device": "default"}}
@@ -483,6 +599,10 @@ def build(mode, params, filename_prefix):
         return build_ltx2_t2v(**kw)
     if mode == "ltx2_i2v":
         return build_ltx2_i2v(**kw)
+    if mode in ("minimax_t2v", "minimax_t2v_hq", "minimax_i2v"):
+        if mode == "minimax_t2v":
+            kw["image"] = None
+        return build_minimax_t2v(turbo=not mode.endswith("_hq"), **kw)
     if mode == "ltx25_t2v":
         return build_ltx25_t2v(**kw)
     if mode == "ltx25_i2v":

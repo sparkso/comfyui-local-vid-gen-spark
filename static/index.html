@@ -108,6 +108,16 @@
         <div class="drop" id="drop">Click or drop an image here<img id="preview" hidden></div>
         <input type="file" name="image" id="image" accept="image/*" hidden>
       </div>
+      <div id="refwrap" hidden>
+        <label>Reference images (up to 9) — refer to them as &lt;Picture 1&gt;, &lt;Picture 2&gt;…</label>
+        <input type="file" name="ref_images" id="ref_images" accept="image/*" multiple>
+        <label>Reference videos (up to 3) — &lt;Video 1&gt;…</label>
+        <input type="file" name="ref_videos" id="ref_videos" accept="video/mp4" multiple>
+        <label>Reference audio (up to 3) — &lt;Audio 1&gt;…</label>
+        <input type="file" name="ref_audios" id="ref_audios" accept="audio/*" multiple>
+        <div class="hint">Give each reference a role in the prompt: identity, style, motion, camera or voice. Example: "&lt;Picture 1&gt; is the main character. &lt;Audio 1&gt; is his voice."</div>
+        <label><input type="checkbox" name="hq_refs" id="hq_refs"> Max reference fidelity (2048 px refs, several times slower)</label>
+      </div>
       <div id="strwrap" hidden>
         <label>Strength — how much to change the image (<span id="strval">0.6</span>)</label>
         <input type="range" name="strength" id="strength" min="0.1" max="1" step="0.05" value="0.6" style="width:100%">
@@ -190,6 +200,7 @@ function onMode() {
   $('#negwrap').hidden = !k.startsWith('wan');
   if (k.startsWith('wan') && !$('#negative').value) $('#negative').value = WAN_NEG;
   $('#imgwrap').hidden = !p.needs_image;
+  $('#refwrap').hidden = !p.r2v;
   $('#strwrap').hidden = !p.has_strength;
   const isVideo = p.output === 'video';
   $('#frameswrap').style.visibility = isVideo ? '' : 'hidden';
@@ -204,7 +215,8 @@ function onMode() {
   p.frames.forEach(n => f.append(new Option(`${n} frames`, n)));
   f.value = p.default_frames;
   $('#fps').value = p.fps;
-  $('#sizehint').textContent = k.startsWith('ltx') ? 'LTX-2: sides divisible by 32, frames 8n+1 (max 241). Stage 1 renders at half size, then 2× latent upscale.'
+  $('#sizehint').textContent = k.startsWith('minimax') ? 'MiniMax H3: 24 fps on a 17k+5 frame grid (73 ≈ 3 s, 124 ≈ 5 s, 243 ≈ 10 s, 362 ≈ 15 s). Native audio incl. dialogue; describe shots, camera and sound in the prompt. ~0.4 MP fits the 3090.'
+    : k.startsWith('ltx') ? 'LTX-2: sides divisible by 32, frames 8n+1 (max 241). Stage 1 renders at half size, then 2× latent upscale.'
     : k.startsWith('wan22_5b') ? 'Wan 2.2 5B: sides divisible by 32, frames 4n+1. Lighter model, fits 24 GB at 1280×704.'
     : isVideo ? 'Wan 2.2 14B: sides divisible by 16, frames 4n+1. 81–161 frames recommended on a 24 GB card.'
     : 'Single-frame render with the Wan 2.2 14B video model (no dedicated image model installed on White-PC yet). Sides divisible by 16.';
@@ -244,11 +256,14 @@ $('#form').onsubmit = async e => {
   const btn = $('#submit'); btn.disabled = true; btn.textContent = 'Submitting…';
   try {
     const fd = new FormData(e.target);
-    if (PRESETS[$('#mode').value].output !== 'video') { fd.delete('frames'); fd.delete('fps'); }
-    const r = await fetch('/api/jobs', { method: 'POST', body: fd });
+    const preset = PRESETS[$('#mode').value];
+    if (preset.output !== 'video') { fd.delete('frames'); fd.delete('fps'); }
+    if (preset.r2v) { fd.set('turbo', $('#mode').value.endsWith('_hq') ? '0' : '1'); fd.set('ref_image_size', $('#hq_refs').checked ? 'max' : 'match'); }
+    const r = await fetch(preset.r2v ? '/api/jobs/r2v' : '/api/jobs', { method: 'POST', body: fd });
     const j = await r.json();
     if (!r.ok) throw new Error(j.error || r.statusText);
-    toast(`Queued ${j.length} job${j.length > 1 ? 's' : ''} on White-PC`);
+    const n = Array.isArray(j) ? j.length : 1;
+    toast(`Queued ${n} job${n > 1 ? 's' : ''} on White-PC`);
     refreshJobs();
   } catch (err) { toast(err.message, true); }
   finally { btn.disabled = false; btn.textContent = 'Generate on White-PC'; }
