@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key><string>com.vweeter.xpost-hourly</string>
+    <key>ProgramArguments</key>
+    <array>
+        <string>/bin/bash</string>
+        <string>-lc</string>
+        <string>cd /Users/sparkso/Code/localvidgen && exec /usr/bin/python3 xpost/autopost.py >> data/xpost/tick.log 2>&1</string>
+    </array>
+    <key>StartInterval</key><integer>3600</integer>
+    <key>RunAtLoad</key><false/>
+    <key>EnvironmentVariables</key>
+    <dict>
+        <key>PATH</key><string>/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin</string>
+    </dict>
+    <key>StandardOutPath</key><string>/Users/sparkso/Code/localvidgen/data/xpost/launchd.out.log</string>
+    <key>StandardErrorPath</key><string>/Users/sparkso/Code/localvidgen/data/xpost/launchd.err.log</string>
+</dict>
+</plist>
