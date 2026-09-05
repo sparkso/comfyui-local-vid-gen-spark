@@ -1,0 +1,398 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LocalVidGen</title>
+<style>
+  :root {
+    --bg:#0b0d12; --panel:#12151c; --panel2:#181c25; --border:#232836; --text:#e5e7eb; --muted:#8b93a5;
+    --accent:#f472b6; --accent2:#a78bfa; --ok:#34d399; --warn:#fbbf24; --err:#f87171; --run:#60a5fa;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 -apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif; }
+  header { display:flex; align-items:center; gap:16px; padding:12px 20px; border-bottom:1px solid var(--border); background:var(--panel); position:sticky; top:0; z-index:5; flex-wrap:wrap; }
+  header h1 { font-size:18px; margin:0; letter-spacing:.3px; }
+  header h1 span { color:var(--accent); }
+  .pill { display:inline-flex; align-items:center; gap:6px; padding:4px 10px; border-radius:999px; background:var(--panel2); border:1px solid var(--border); font-size:12px; color:var(--muted); }
+  .dot { width:8px; height:8px; border-radius:50%; background:var(--muted); }
+  .dot.ok { background:var(--ok); box-shadow:0 0 8px var(--ok); }
+  .dot.err { background:var(--err); box-shadow:0 0 8px var(--err); }
+  .spacer { flex:1; }
+  main { display:grid; grid-template-columns: 380px 1fr; gap:18px; padding:18px 20px; max-width:1700px; margin:0 auto; }
+  @media (max-width:980px) { main { grid-template-columns:1fr; } }
+  .panel { background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:16px; }
+  .panel h2 { font-size:13px; text-transform:uppercase; letter-spacing:.8px; color:var(--muted); margin:0 0 12px; }
+  label { display:block; font-size:12px; color:var(--muted); margin:10px 0 4px; }
+  input[type=text], input[type=number], select, textarea { width:100%; background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:8px 10px; font:inherit; }
+  textarea { min-height:120px; resize:vertical; }
+  .row { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  .row3 { display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; }
+  button { background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:7px 12px; font:inherit; cursor:pointer; }
+  button:hover { border-color:var(--accent2); }
+  button.primary { background:linear-gradient(135deg,var(--accent),var(--accent2)); border:none; color:#0b0d12; font-weight:600; width:100%; padding:11px; margin-top:14px; font-size:15px; }
+  button.primary:disabled { opacity:.5; cursor:not-allowed; }
+  button.small { padding:4px 9px; font-size:12px; }
+  button.danger:hover { border-color:var(--err); color:var(--err); }
+  .hint { font-size:11px; color:var(--muted); margin-top:4px; }
+  .drop { border:1px dashed var(--border); border-radius:8px; padding:14px; text-align:center; color:var(--muted); cursor:pointer; margin-top:6px; }
+  .drop img { max-width:100%; max-height:180px; border-radius:6px; display:block; margin:6px auto 0; }
+  .tabs { display:flex; gap:6px; margin-bottom:12px; }
+  .tasks { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .tasks button { padding:9px 6px; font-size:13px; }
+  .tasks button.active { border-color:var(--accent); color:var(--accent); background:#1a0f18; }
+  .job img { width:100%; display:block; background:#000; max-height:420px; object-fit:contain; }
+  .tabs button.active { border-color:var(--accent); color:var(--accent); }
+  .jobs { display:grid; grid-template-columns:repeat(auto-fill,minmax(300px,1fr)); gap:14px; }
+  .job { background:var(--panel2); border:1px solid var(--border); border-radius:12px; overflow:hidden; display:flex; flex-direction:column; }
+  .job video { width:100%; background:#000; display:block; max-height:420px; }
+  .job .body { padding:10px 12px; display:flex; flex-direction:column; gap:6px; }
+  .job .prompt { font-size:13px; max-height:4.4em; overflow:hidden; color:var(--text); }
+  .job .prompt.open { max-height:none; }
+  .meta { font-size:11px; color:var(--muted); display:flex; flex-wrap:wrap; gap:6px 10px; }
+  .badge { font-size:11px; padding:2px 8px; border-radius:999px; border:1px solid var(--border); color:var(--muted); }
+  .badge.queued { color:var(--warn); border-color:var(--warn); }
+  .badge.running { color:var(--run); border-color:var(--run); }
+  .badge.done { color:var(--ok); border-color:var(--ok); }
+  .badge.error, .badge.cancelled { color:var(--err); border-color:var(--err); }
+  .bar { height:6px; background:var(--border); border-radius:3px; overflow:hidden; }
+  .bar i { display:block; height:100%; background:linear-gradient(90deg,var(--run),var(--accent2)); width:0; transition:width .4s; }
+  .bar.indet i { width:35%; animation:slide 1.4s infinite linear; }
+  @keyframes slide { from { transform:translateX(-100%);} to { transform:translateX(300%);} }
+  .actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:4px; }
+  .err { color:var(--err); font-size:12px; white-space:pre-wrap; }
+  .toast { position:fixed; bottom:18px; right:18px; background:var(--panel2); border:1px solid var(--border); border-left:4px solid var(--accent); padding:10px 14px; border-radius:8px; max-width:420px; z-index:10; display:none; white-space:pre-wrap; }
+  .toast.err { border-left-color:var(--err); }
+  .empty { color:var(--muted); padding:30px; text-align:center; }
+  .lib { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:12px; }
+  .lib .item { background:var(--panel2); border:1px solid var(--border); border-radius:10px; padding:10px; }
+  .lib .item .name { font-size:12px; word-break:break-all; margin-bottom:6px; }
+  .switch { display:inline-flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); cursor:pointer; }
+  a { color:var(--accent2); }
+</style>
+</head>
+<body>
+<header>
+  <h1>🎬 Local<span>VidGen</span></h1>
+  <span class="pill"><span class="dot" id="dot"></span><span id="pcstate">checking White-PC…</span></span>
+  <span class="pill" id="gpu">GPU —</span>
+  <span class="pill" id="queue">queue —</span>
+  <span class="pill" id="disk" title="Free space on tigerclaw, where the gallery lives. Delete old clips from the gallery to free space.">disk —</span>
+  <span class="spacer"></span>
+  <label class="switch" title="Send every finished video to Telegram via the OpenClaw bot">
+    <input type="checkbox" id="autotg"> auto-send to Telegram <span id="tgready"></span>
+  </label>
+  <a class="pill" href="http://10.0.0.20:8000" target="_blank" title="Open ComfyUI on White-PC (LAN only)">ComfyUI ↗</a>
+</header>
+
+<main>
+  <section class="panel">
+    <h2>New generation</h2>
+    <form id="form">
+      <label>Task</label>
+      <div class="tasks" id="tasks"></div>
+      <label>Model / pipeline</label>
+      <select name="mode" id="mode"></select>
+
+      <label>Prompt</label>
+      <textarea name="prompt" id="prompt" placeholder="Describe the shot: subject, action, camera move, lighting, style…" required></textarea>
+      <div class="hint">Both models hallucinate on-screen text. Generate silent/textless and add captions or voiceover in post.</div>
+
+      <div id="negwrap" hidden>
+        <label>Negative prompt (Wan)</label>
+        <textarea name="negative" id="negative" style="min-height:60px"></textarea>
+      </div>
+
+      <div id="imgwrap" hidden>
+        <label>Input image</label>
+        <div class="drop" id="drop">Click or drop an image here<img id="preview" hidden></div>
+        <input type="file" name="image" id="image" accept="image/*" hidden>
+      </div>
+      <div id="strwrap" hidden>
+        <label>Strength — how much to change the image (<span id="strval">0.6</span>)</label>
+        <input type="range" name="strength" id="strength" min="0.1" max="1" step="0.05" value="0.6" style="width:100%">
+        <div class="hint">0.3 keeps the composition and restyles; 0.8+ mostly follows the prompt.</div>
+      </div>
+
+      <label>Size (final output)</label>
+      <select id="size"></select>
+      <div class="row" style="margin-top:6px">
+        <input type="number" name="width" id="width" placeholder="width">
+        <input type="number" name="height" id="height" placeholder="height">
+      </div>
+      <div class="hint" id="sizehint"></div>
+
+      <div class="row3">
+        <div id="frameswrap"><label>Frames</label><select name="frames" id="frames"></select></div>
+        <div id="fpswrap"><label>FPS</label><input type="number" name="fps" id="fps" step="1" min="8" max="60"></div>
+        <div><label>Count</label><input type="number" name="count" id="count" value="1" min="1" max="8"></div>
+      </div>
+      <div class="hint" id="durhint"></div>
+
+      <label>Seed (blank = random; count &gt; 1 increments)</label>
+      <div class="row"><input type="text" name="seed" id="seed" placeholder="random"><button type="button" id="randseed">🎲 random</button></div>
+
+      <button class="primary" id="submit" type="submit">Generate on White-PC</button>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="tabs">
+      <button type="button" class="active" data-tab="jobs">Jobs &amp; gallery <span id="njobs"></span></button>
+      <button type="button" data-tab="lib">White-PC output folder</button>
+    </div>
+    <div id="tab-jobs"><div class="jobs" id="jobs"></div><div class="empty" id="nojobs" hidden>No jobs yet. Write a prompt and hit Generate.</div></div>
+    <div id="tab-lib" hidden>
+      <div class="hint" style="margin-bottom:10px">Everything in ComfyUI's <code>output/</code> on White-PC, including older manual runs. Streams through this server; “Import” copies the file to tigerclaw and adds it to the gallery.</div>
+      <div class="lib" id="lib"></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+let PRESETS = {}, TASKS = {}, WAN_NEG = '', jobs = [], sizeCustom = false, task = 't2v';
+const isImg = f => /\.(png|jpe?g|webp)$/i.test(f || '');
+
+function toast(msg, isErr) {
+  const t = $('#toast'); t.textContent = msg; t.className = 'toast' + (isErr ? ' err' : ''); t.style.display = 'block';
+  clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', isErr ? 9000 : 3500);
+}
+const fmtBytes = n => n > 1e9 ? (n/1e9).toFixed(1)+' GB' : n > 1e6 ? (n/1e6).toFixed(1)+' MB' : Math.round(n/1e3)+' KB';
+const fmtSecs = s => s == null ? '' : s >= 60 ? `${Math.floor(s/60)}m ${Math.round(s%60)}s` : `${Math.round(s)}s`;
+const esc = s => (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+async function loadPresets() {
+  const r = await fetch('/api/presets').then(r => r.json());
+  PRESETS = r.presets; TASKS = r.tasks; WAN_NEG = r.wan_negative;
+  const tb = $('#tasks'); tb.innerHTML = '';
+  for (const [k, label] of Object.entries(TASKS)) {
+    const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.dataset.task = k;
+    b.onclick = () => setTask(k); tb.append(b);
+  }
+  const saved = localStorage.getItem('lvg.mode');
+  setTask(saved && PRESETS[saved] ? PRESETS[saved].task : 't2v', saved);
+}
+
+function setTask(k, preferredMode) {
+  task = k;
+  document.querySelectorAll('#tasks button').forEach(b => b.classList.toggle('active', b.dataset.task === k));
+  const m = $('#mode'); m.innerHTML = '';
+  for (const [id, p] of Object.entries(PRESETS)) if (p.task === k) m.append(new Option(p.label, id));
+  if (preferredMode && PRESETS[preferredMode] && PRESETS[preferredMode].task === k) m.value = preferredMode;
+  onMode();
+}
+
+function onMode() {
+  const k = $('#mode').value, p = PRESETS[k];
+  localStorage.setItem('lvg.mode', k);
+  $('#negwrap').hidden = !k.startsWith('wan');
+  if (k.startsWith('wan') && !$('#negative').value) $('#negative').value = WAN_NEG;
+  $('#imgwrap').hidden = !p.needs_image;
+  $('#strwrap').hidden = !p.has_strength;
+  const isVideo = p.output === 'video';
+  $('#frameswrap').style.visibility = isVideo ? '' : 'hidden';
+  $('#fpswrap').style.visibility = isVideo ? '' : 'hidden';
+  $('#durhint').hidden = !isVideo;
+  $('#submit').textContent = (isVideo ? 'Generate video' : 'Generate image') + ' on White-PC';
+  const s = $('#size'); s.innerHTML = '';
+  p.sizes.forEach(([label, w, h], i) => s.append(new Option(label, i)));
+  s.append(new Option('Custom…', 'custom'));
+  s.value = 0; onSize();
+  const f = $('#frames'); f.innerHTML = '';
+  p.frames.forEach(n => f.append(new Option(`${n} frames`, n)));
+  f.value = p.default_frames;
+  $('#fps').value = p.fps;
+  $('#sizehint').textContent = k.startsWith('ltx') ? 'LTX-2: sides divisible by 32, frames 8n+1 (max 241). Stage 1 renders at half size, then 2× latent upscale.'
+    : k.startsWith('wan22_5b') ? 'Wan 2.2 5B: sides divisible by 32, frames 4n+1. Lighter model, fits 24 GB at 1280×704.'
+    : isVideo ? 'Wan 2.2 14B: sides divisible by 16, frames 4n+1. 81–161 frames recommended on a 24 GB card.'
+    : 'Single-frame render with the Wan 2.2 14B video model (no dedicated image model installed on White-PC yet). Sides divisible by 16.';
+  onDur();
+}
+function onSize() {
+  const v = $('#size').value, p = PRESETS[$('#mode').value];
+  if (v === 'custom') { sizeCustom = true; return; }
+  sizeCustom = false;
+  const [, w, h] = p.sizes[+v]; $('#width').value = w; $('#height').value = h;
+}
+function onDur() {
+  const n = +$('#frames').value, fps = +$('#fps').value || 1;
+  $('#durhint').textContent = `≈ ${(n / fps).toFixed(1)} s of video at ${fps} fps`;
+}
+$('#mode').onchange = onMode; $('#size').onchange = onSize;
+$('#frames').onchange = onDur; $('#fps').oninput = onDur;
+['#width', '#height'].forEach(s => $(s).oninput = () => { $('#size').value = 'custom'; sizeCustom = true; });
+$('#randseed').onclick = () => $('#seed').value = Math.floor(Math.random() * 2 ** 40);
+$('#strength').oninput = e => $('#strval').textContent = e.target.value;
+
+// image drop
+const drop = $('#drop'), fileIn = $('#image');
+drop.onclick = () => fileIn.click();
+drop.ondragover = e => { e.preventDefault(); drop.style.borderColor = 'var(--accent)'; };
+drop.ondragleave = () => drop.style.borderColor = '';
+drop.ondrop = e => { e.preventDefault(); drop.style.borderColor = ''; if (e.dataTransfer.files[0]) { fileIn.files = e.dataTransfer.files; showPreview(); } };
+fileIn.onchange = showPreview;
+function showPreview() {
+  const f = fileIn.files[0]; if (!f) return;
+  const img = $('#preview'); img.src = URL.createObjectURL(f); img.hidden = false;
+  drop.firstChild.textContent = f.name + ' ';
+}
+
+$('#form').onsubmit = async e => {
+  e.preventDefault();
+  const btn = $('#submit'); btn.disabled = true; btn.textContent = 'Submitting…';
+  try {
+    const fd = new FormData(e.target);
+    if (PRESETS[$('#mode').value].output !== 'video') { fd.delete('frames'); fd.delete('fps'); }
+    const r = await fetch('/api/jobs', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.error || r.statusText);
+    toast(`Queued ${j.length} job${j.length > 1 ? 's' : ''} on White-PC`);
+    refreshJobs();
+  } catch (err) { toast(err.message, true); }
+  finally { btn.disabled = false; btn.textContent = 'Generate on White-PC'; }
+};
+
+// status
+async function refreshStatus() {
+  try {
+    const s = await fetch('/api/status').then(r => r.json());
+    $('#dot').className = 'dot ' + (s.online ? 'ok' : 'err');
+    $('#pcstate').textContent = s.online ? `White-PC online · ComfyUI ${s.comfy_version || ''}` : `White-PC offline (${s.url})`;
+    $('#gpu').textContent = s.online ? `${(s.gpu || 'GPU').replace('NVIDIA GeForce ', '')} · ${fmtBytes(s.vram_free)} free / ${fmtBytes(s.vram_total)}` : 'GPU —';
+    $('#queue').textContent = s.online ? `ComfyUI queue: ${s.queue_running} running · ${s.queue_pending} pending` : 'queue —';
+    if (s.disk_free != null) {
+      const low = s.disk_free < 10e9;
+      $('#disk').textContent = `tigerclaw disk: ${fmtBytes(s.disk_free)} free · library ${fmtBytes(s.library_bytes || 0)}`;
+      $('#disk').style.color = low ? 'var(--err)' : '';
+    }
+    $('#autotg').checked = !!s.auto_telegram;
+    $('#tgready').textContent = s.telegram_ready ? '' : '(no bot creds)';
+  } catch (e) { $('#pcstate').textContent = 'dashboard unreachable'; }
+}
+$('#autotg').onchange = async e => {
+  await fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ auto_telegram: e.target.checked }) });
+  toast('Auto-send ' + (e.target.checked ? 'on' : 'off'));
+};
+
+// jobs
+async function refreshJobs() {
+  try { jobs = await fetch('/api/jobs').then(r => r.json()); } catch { return; }
+  renderJobs();
+}
+function renderJobs() {
+  const box = $('#jobs'); const active = jobs.filter(j => ['queued', 'running'].includes(j.status)).length;
+  $('#njobs').textContent = jobs.length ? `(${jobs.length}${active ? `, ${active} active` : ''})` : '';
+  $('#nojobs').hidden = jobs.length > 0;
+  const open = new Set([...box.querySelectorAll('.prompt.open')].map(el => el.dataset.id));
+  box.innerHTML = jobs.map(j => {
+    const p = PRESETS[j.mode] || {};
+    const label = (TASKS[j.task || p.task] ? TASKS[j.task || p.task] + ' · ' : '') + (p.label || j.mode);
+    let prog = '';
+    if (j.status === 'running') {
+      const p = j.progress;
+      prog = p && p.max ? `<div class="bar"><i style="width:${Math.round(100 * p.value / p.max)}%"></i></div><div class="meta"><span>step ${p.value}/${p.max}</span><span>node ${esc(p.node || '')}</span><span>started ${new Date(j.started_at).toLocaleTimeString()}</span></div>`
+                        : `<div class="bar indet"><i></i></div><div class="meta"><span>loading models / running… started ${new Date(j.started_at).toLocaleTimeString()}</span></div>`;
+    } else if (j.status === 'queued') {
+      prog = `<div class="meta"><span>waiting in ComfyUI queue since ${new Date(j.created_at).toLocaleTimeString()}</span></div>`;
+    }
+    const video = !j.file ? '' : isImg(j.file) ? `<a href="/videos/${j.file}" target="_blank"><img src="/videos/${j.file}" loading="lazy"></a>`
+                                                : `<video src="/videos/${j.file}" controls preload="metadata" playsinline loop></video>`;
+    const tg = j.telegram ? `<span title="${esc(j.telegram.msg)}">${j.telegram.ok ? '📨 sent to Telegram' : '⚠️ Telegram failed'}</span>` : '';
+    return `<div class="job" data-id="${j.id}">${video}<div class="body">
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span class="badge ${j.status}">${j.status}</span><span class="meta">${esc(label)}</span></div>
+      <div class="prompt ${open.has(j.id) ? 'open' : ''}" data-id="${j.id}" onclick="this.classList.toggle('open')" title="click to expand">${esc(j.prompt)}</div>
+      ${prog}
+      ${j.error ? `<div class="err">${esc(j.error)}</div>` : ''}${j.last_error ? `<div class="err">${esc(j.last_error)}</div>` : ''}
+      <div class="meta">${j.parent ? `<span>↳ shot ${(j.chain_index || 0) + 1}, continues ${esc(j.parent)}</span>` : ''}${j.stitched ? `<span>🧵 ${j.stitched.length} clips</span>` : ''}${j.width ? `<span>${j.width}×${j.height}</span>` : ''}${j.frames > 1 ? `<span>${j.frames}f @ ${j.fps}fps</span>` : ''}${j.strength ? `<span>strength ${j.strength}</span>` : ''}<span>seed ${j.seed}</span>${j.elapsed ? `<span>⏱ ${fmtSecs(j.elapsed)}</span>` : ''}${j.size ? `<span>${fmtBytes(j.size)}</span>` : ''}<span>${new Date(j.created_at).toLocaleString()}</span>${tg}</div>
+      <div class="actions">
+        ${['queued', 'running'].includes(j.status) ? `<button class="small danger" onclick="act('${j.id}','cancel')">✖ cancel</button>` : ''}
+        ${j.file ? `<a href="/videos/${j.file}" download="${j.file}"><button class="small">⬇ download</button></a><button class="small" onclick="act('${j.id}','telegram')">📨 Telegram</button>` : ''}
+        ${j.file && isImg(j.file) ? `<button class="small" onclick="useAsInput('${j.id}','i2v')">🎬 animate</button><button class="small" onclick="useAsInput('${j.id}','i2i')">🎨 restyle</button>` : ''}
+        ${j.file && !isImg(j.file) && !j.stitched ? `<button class="small" onclick="extend('${j.id}')">➕ extend (next shot)</button>` : ''}
+        ${j.file && j.parent ? `<button class="small" onclick="stitchChain('${j.id}')">🧵 stitch chain</button>` : ''}
+        ${!j.imported ? `<button class="small" onclick="reuse('${j.id}')">✎ edit &amp; reuse</button><button class="small" onclick="rerun('${j.id}')">↻ rerun (new seed)</button>` : ''}
+        ${!['queued', 'running'].includes(j.status) ? `<button class="small danger" onclick="del('${j.id}')">🗑</button>` : ''}
+      </div></div></div>`;
+  }).join('');
+}
+async function act(id, what) {
+  const r = await fetch(`/api/jobs/${id}/${what}`, { method: 'POST' }); const j = await r.json();
+  toast(r.ok ? (what === 'telegram' ? 'Sent to Telegram' : 'Cancelled') : (j.error || j.msg || 'failed'), !r.ok); refreshJobs();
+}
+async function rerun(id) {
+  const r = await fetch(`/api/jobs/${id}/rerun`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' }); const j = await r.json();
+  toast(r.ok ? 'Re-queued with a new seed' : j.error, !r.ok); refreshJobs();
+}
+async function extend(id) {
+  const j = jobs.find(x => x.id === id); if (!j) return;
+  const prompt = window.prompt('Next shot prompt (the new clip starts from the last frame of this one):', j.prompt);
+  if (prompt === null) return;
+  const r = await fetch(`/api/jobs/${id}/extend`, { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, frames: j.frames, mode: 'ltx2_i2v' }) });
+  const res = await r.json();
+  toast(r.ok ? 'Continuation queued (LTX-2 image-to-video from last frame)' : res.error, !r.ok); refreshJobs();
+}
+async function stitchChain(id) {
+  const chain = []; let cur = jobs.find(x => x.id === id);
+  while (cur) { chain.unshift(cur.id); cur = cur.parent ? jobs.find(x => x.id === cur.parent) : null; }
+  if (chain.length < 2) { toast('Nothing to stitch: no finished parent clip', true); return; }
+  if (!window.confirm(`Stitch ${chain.length} clips in order?\n${chain.join('\n')}`)) return;
+  toast('Stitching…');
+  const r = await fetch('/api/stitch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: chain }) });
+  const res = await r.json();
+  toast(r.ok ? 'Stitched clip added to gallery' : res.error, !r.ok); refreshJobs();
+}
+async function useAsInput(id, nextTask) {
+  const j = jobs.find(x => x.id === id); if (!j || !j.file) return;
+  const blob = await fetch('/videos/' + j.file).then(r => r.blob());
+  const dt = new DataTransfer(); dt.items.add(new File([blob], j.file, { type: blob.type }));
+  setTask(nextTask); fileIn.files = dt.files; showPreview();
+  $('#prompt').value = j.prompt; $('#width').value = j.width; $('#height').value = j.height; $('#size').value = 'custom';
+  window.scrollTo({ top: 0, behavior: 'smooth' }); toast('Image loaded as input for ' + TASKS[nextTask]);
+}
+function reuse(id) {
+  const j = jobs.find(x => x.id === id); if (!j) return;
+  setTask((PRESETS[j.mode] || {}).task || j.task || 't2v', j.mode);
+  $('#prompt').value = j.prompt; if (j.negative) $('#negative').value = j.negative;
+  $('#width').value = j.width; $('#height').value = j.height; $('#size').value = 'custom';
+  if (![...$('#frames').options].some(o => +o.value === j.frames)) $('#frames').append(new Option(`${j.frames} frames`, j.frames));
+  $('#frames').value = j.frames; if (j.fps) $('#fps').value = j.fps; $('#seed').value = j.seed;
+  if (j.strength) { $('#strength').value = j.strength; $('#strval').textContent = j.strength; }
+  onDur();
+  window.scrollTo({ top: 0, behavior: 'smooth' }); $('#prompt').focus();
+}
+async function del(id) {
+  const r = await fetch(`/api/jobs/${id}`, { method: 'DELETE' }); const j = await r.json();
+  toast(r.ok ? 'Deleted' : j.error, !r.ok); refreshJobs();
+}
+
+// White-PC library tab
+document.querySelectorAll('.tabs button').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.tabs button').forEach(x => x.classList.toggle('active', x === b));
+  $('#tab-jobs').hidden = b.dataset.tab !== 'jobs'; $('#tab-lib').hidden = b.dataset.tab !== 'lib';
+  if (b.dataset.tab === 'lib') loadLib();
+});
+async function loadLib() {
+  const box = $('#lib'); box.innerHTML = '<div class="empty">loading…</div>';
+  const r = await fetch('/api/comfy/outputs'); const names = await r.json();
+  if (!r.ok) { box.innerHTML = `<div class="empty err">${esc(names.error)}</div>`; return; }
+  if (!names.length) { box.innerHTML = '<div class="empty">Output folder is empty.</div>'; return; }
+  box.innerHTML = names.map(n => `<div class="item"><div class="name">${esc(n)}</div>
+    ${isImg(n) ? `<img src="/api/comfy/view?filename=${encodeURIComponent(n)}" loading="lazy" style="width:100%;background:#000;border-radius:6px">`
+               : `<video src="/api/comfy/view?filename=${encodeURIComponent(n)}" controls preload="none" style="width:100%;background:#000;border-radius:6px"></video>`}
+    <div class="actions"><button class="small" onclick="importRemote('${esc(n)}')">⬇ import to gallery</button></div></div>`).join('');
+}
+async function importRemote(n) {
+  toast('Importing ' + n + '…');
+  const r = await fetch('/api/comfy/import?filename=' + encodeURIComponent(n)); const j = await r.json();
+  toast(r.ok ? 'Imported ' + n : j.error, !r.ok); refreshJobs();
+}
+
+loadPresets().then(() => { refreshStatus(); refreshJobs(); });
+setInterval(refreshStatus, 8000);
+setInterval(refreshJobs, 3000);
+</script>
+</body>
+</html>

@@ -1,0 +1,7 @@
+{
+  "port": 5030,
+  "comfy_url": "http://10.0.0.20:8000",
+  "poll_seconds": 10,
+  "openclaw_dir": "/Users/tigerclaw/.openclaw",
+  "ffmpeg": "/opt/homebrew/bin/ffmpeg"
+}
