@@ -111,6 +111,16 @@ def telegram(token, text):
          timeout=30)
 
 
+def telegram_video(token, path, caption):
+    """Manual-post fallback: hand the owner the clip + caption so it can be posted from the phone."""
+    if not token:
+        return False
+    r = subprocess.run(["curl", "-s", "-m", "300", "-X", "POST", f"https://api.telegram.org/bot{token}/sendVideo",
+                        "-F", "chat_id=194069935", "-F", f"caption={caption}", "-F", "supports_streaming=true",
+                        "-F", f"video=@{path}"], capture_output=True, text=True)
+    return '"ok":true' in r.stdout
+
+
 # ----------------------------------------------------------------------------- render
 def whitepc_online():
     st, b = http(f"{DASH}/api/status", timeout=15)
@@ -196,7 +206,13 @@ def main():
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--no-render", action="store_true")
     ap.add_argument("--post-only", action="store_true")
+    ap.add_argument("--now", action="store_true", help="skip the random 1-30 min delay (launchd ticks use the delay)")
     a = ap.parse_args()
+    if not (a.now or a.dry_run):
+        import random
+        delay = random.randint(60, 1800)   # owner: "don't post every hour exactly, add 1-30 min randomly"
+        print(f"jitter: sleeping {delay // 60} min", flush=True)
+        time.sleep(delay)
     s = secrets()
     if not s["xquik"]:
         print("no Xquik key", file=sys.stderr)
@@ -229,11 +245,26 @@ def main():
                     telegram(s["tg"], f"xpost dropped {item['slug']} (X refused): {msg[:200]}")
                 else:
                     log(f"POST FAILED (will retry) {item['slug']}: {msg}")
+                    if not item.get("dm_sent"):
+                        local = STATE_DIR / Path(item["media_url"]).name
+                        cap = f"Xquik write failed ({msg[:80]}). Post this one by hand?\n\n{item['text']}"
+                        if local.exists() and telegram_video(s["tg"], local, cap):
+                            item["dm_sent"] = now()
+                            log(f"DM'd clip {item['slug']} to Telegram for manual posting")
         else:
             if not st.get("xquik_down_since"):
                 st["xquik_down_since"] = now()
                 telegram(s["tg"], f"xpost: Xquik not answering; {len(st['queue'])} clip(s) queued. Will keep rendering hourly and post when it recovers.")
             log(f"xquik down, {len(st['queue'])} queued")
+            # Browser automation cannot attach video on x.com, so the fallback is a manual post:
+            # send the owner the clip + caption once, they post it from the phone in seconds.
+            item = st["queue"][0]
+            if not item.get("dm_sent"):
+                local = STATE_DIR / Path(item["media_url"]).name
+                cap = f"Xquik is down. Post this one by hand?\n\n{item['text']}"
+                if local.exists() and telegram_video(s["tg"], local, cap):
+                    item["dm_sent"] = now()
+                    log(f"DM'd clip {item['slug']} to Telegram for manual posting")
         save_state(st)
     if a.post_only:
         return 0
