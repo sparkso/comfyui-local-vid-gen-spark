@@ -44,7 +44,16 @@ MODELS = {
     "wan_vae": "wan_2.1_vae.safetensors",
     "wan5b_unet": "wan2.2_ti2v_5B_fp16.safetensors",
     "wan5b_vae": "wan2.2_vae.safetensors",
+    "ltx25_unet": "ltx-2.5-22b-distilled-transformer-comfy-int8-convrot.safetensors",
+    "ltx25_video_vae": "ltx-2.5-video-vae-bf16.safetensors",
+    "ltx25_audio_vae": "ltx-2.5-audio-vae-bf16.safetensors",
+    "ltx25_text_encoder": "gemma4-12b-with-proj-ltx-2.5-comfy-int8-convrot.safetensors",
+    "ltx25_upscaler": "ltx-2.5-latent-spatial-upscaler-x2-bf16-1.0.safetensors",
 }
+
+LTX25_STAGE1_SIGMAS = "1.0, 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0"
+LTX25_STAGE2_SIGMAS = "0.85, 0.7250, 0.4219, 0.0"
+LTX25_NEGATIVE = "pc game, console game, video game, cartoon, childish, ugly"
 
 TASKS = {
     "t2i": "Text → Image",
@@ -87,6 +96,8 @@ _WAN_FRAMES = [41, 61, 81, 101, 121, 141, 161]
 # Presets shown in the UI. width/height are the FINAL output size.
 PRESETS = {
     # ---- text -> video
+    "ltx25_t2v": {"task": "t2v", "label": "LTX-2.5 22B distilled (audio)", "sizes": _LTX_SIZES,
+                  "frames": _LTX_FRAMES, "default_frames": 121, "fps": 24, "needs_image": False, "output": "video"},
     "ltx2_t2v": {"task": "t2v", "label": "LTX-2 19B distilled (audio, fast)", "sizes": _LTX_SIZES,
                  "frames": _LTX_FRAMES, "default_frames": 121, "fps": 24, "needs_image": False, "output": "video"},
     "wan22_t2v": {"task": "t2v", "label": "Wan 2.2 14B · 4-step LoRA", "sizes": _WAN14_VIDEO_SIZES,
@@ -96,6 +107,8 @@ PRESETS = {
     "wan22_5b_t2v": {"task": "t2v", "label": "Wan 2.2 5B TI2V · 16-step", "sizes": _WAN5_VIDEO_SIZES,
                      "frames": _WAN_FRAMES, "default_frames": 121, "fps": 24, "needs_image": False, "output": "video"},
     # ---- image -> video
+    "ltx25_i2v": {"task": "i2v", "label": "LTX-2.5 22B distilled (audio)", "sizes": _LTX_SIZES,
+                  "frames": _LTX_FRAMES, "default_frames": 121, "fps": 24, "needs_image": True, "output": "video"},
     "ltx2_i2v": {"task": "i2v", "label": "LTX-2 19B distilled (audio, fast)", "sizes": _LTX_SIZES,
                  "frames": _LTX_FRAMES, "default_frames": 121, "fps": 24, "needs_image": True, "output": "video"},
     "wan22_5b_i2v": {"task": "i2v", "label": "Wan 2.2 5B TI2V · 16-step", "sizes": _WAN5_VIDEO_SIZES,
@@ -109,7 +122,42 @@ PRESETS = {
     "wan22_i2i": {"task": "i2i", "label": "Wan 2.2 14B low-noise · img2img (strength)", "sizes": _IMAGE_SIZES,
                   "frames": [1], "default_frames": 1, "fps": 1, "needs_image": True, "output": "image",
                   "has_strength": True},
+    # ---- post-process (not shown in the task picker)
+    "faceswap": {"task": "fix", "label": "ReActor face swap (inswapper_128 + GFPGAN)", "sizes": [],
+                 "frames": [1], "default_frames": 1, "fps": 0, "needs_image": True, "output": "video", "hidden": True},
 }
+
+
+def build_faceswap(video_file, face_image, restore=True, filename_prefix="video/localvidgen/job",
+                   visibility=1.0, codeformer_weight=0.5, **_):
+    """Swap the reference face into every frame of an uploaded clip (ComfyUI-ReActor), keep the original audio."""
+    g = {
+        "vid": {"class_type": "LoadVideo", "inputs": {"file": video_file}},
+        "comp": {"class_type": "GetVideoComponents", "inputs": {"video": ["vid", 0]}},
+        "face": {"class_type": "LoadImage", "inputs": {"image": face_image}},
+        "swap": {
+            "class_type": "ReActorFaceSwap",
+            "inputs": {
+                "enabled": True,
+                "input_image": ["comp", 0],
+                "source_image": ["face", 0],
+                "swap_model": "inswapper_128.onnx",
+                "facedetection": "retinaface_resnet50",
+                "face_restore_model": "GFPGANv1.4.pth" if restore else "none",
+                "face_restore_visibility": float(visibility),
+                "codeformer_weight": float(codeformer_weight),
+                "detect_gender_input": "no",
+                "detect_gender_source": "no",
+                "input_faces_index": "0",
+                "source_faces_index": "0",
+                "console_log_level": 1,
+            },
+        },
+        "video": {"class_type": "CreateVideo", "inputs": {"images": ["swap", 0], "audio": ["comp", 1], "fps": ["comp", 2]}},
+        "save": {"class_type": "SaveVideo",
+                 "inputs": {"video": ["video", 0], "filename_prefix": filename_prefix, "format": "auto", "codec": "auto"}},
+    }
+    return g
 
 
 def _snap(value, step, minimum):
@@ -222,6 +270,96 @@ def build_ltx2_i2v(prompt, image, width, height, frames, seed, fps=24, filename_
     g["video"] = {"class_type": "CreateVideo", "inputs": {"images": ["decode", 0], "audio": ["adecode", 0], "fps": float(fps)}}
     g["save"] = {"class_type": "SaveVideo",
                  "inputs": {"video": ["video", 0], "filename_prefix": filename_prefix, "format": "auto", "codec": "auto"}}
+    return g
+
+
+# ----------------------------------------------------------------------------- LTX-2.5
+def _ltx25_common(g, prompt, fps, negative=None):
+    """Loaders + conditioning exactly as the bundled 'video_ltx2_5_*' templates (prompt enhancer switched off)."""
+    g["unet"] = {"class_type": "UNETLoader", "inputs": {"unet_name": MODELS["ltx25_unet"], "weight_dtype": "default"}}
+    g["vae"] = {"class_type": "VAELoader", "inputs": {"vae_name": MODELS["ltx25_video_vae"]}}
+    g["audio_vae"] = {"class_type": "VAELoader", "inputs": {"vae_name": MODELS["ltx25_audio_vae"]}}
+    g["clip"] = {"class_type": "CLIPLoader",
+                 "inputs": {"clip_name": MODELS["ltx25_text_encoder"], "type": "ltxv", "device": "default"}}
+    g["pos"] = {"class_type": "CLIPTextEncode", "inputs": {"text": prompt, "clip": ["clip", 0]}}
+    g["neg"] = {"class_type": "CLIPTextEncode", "inputs": {"text": negative or LTX25_NEGATIVE, "clip": ["clip", 0]}}
+    g["cond"] = {"class_type": "LTXVConditioning",
+                 "inputs": {"positive": ["pos", 0], "negative": ["neg", 0], "frame_rate": float(fps)}}
+    g["upscaler"] = {"class_type": "LatentUpscaleModelLoader", "inputs": {"model_name": MODELS["ltx25_upscaler"]}}
+
+
+def _ltx25_sampler(g, tag, sigmas, seed, latent):
+    g[f"guider{tag}"] = {"class_type": "LTXVDualCFGGuider",
+                         "inputs": {"model": ["unet", 0], "positive": ["cond", 0], "negative": ["cond", 1],
+                                    "video_cfg": 1.0, "audio_cfg": 1.0}}
+    g[f"sampler{tag}"] = {"class_type": "KSamplerSelect", "inputs": {"sampler_name": "euler_ancestral"}}
+    g[f"sigmas{tag}"] = {"class_type": "ManualSigmas", "inputs": {"sigmas": sigmas}}
+    g[f"noise{tag}"] = {"class_type": "RandomNoise", "inputs": {"noise_seed": int(seed)}}
+    g[f"samp{tag}"] = {"class_type": "SamplerCustomAdvanced",
+                       "inputs": {"noise": [f"noise{tag}", 0], "guider": [f"guider{tag}", 0], "sampler": [f"sampler{tag}", 0],
+                                  "sigmas": [f"sigmas{tag}", 0], "latent_image": latent}}
+    # 2.5 templates take SamplerCustomAdvanced.output (slot 0) at both stages.
+    g[f"sep{tag}"] = {"class_type": "LTXVSeparateAVLatent", "inputs": {"av_latent": [f"samp{tag}", 0]}}
+
+
+def _ltx25_finish(g, fps, filename_prefix):
+    g["decode"] = {"class_type": "VAEDecodeTiled",
+                   "inputs": {"samples": ["sep2", 0], "vae": ["vae", 0], "tile_size": 512, "overlap": 64,
+                              "temporal_size": 64, "temporal_overlap": 16}}
+    g["adecode"] = {"class_type": "LTXVAudioVAEDecode", "inputs": {"samples": ["sep2", 1], "audio_vae": ["audio_vae", 0]}}
+    g["video"] = {"class_type": "CreateVideo", "inputs": {"images": ["decode", 0], "audio": ["adecode", 0], "fps": float(fps)}}
+    g["save"] = {"class_type": "SaveVideo",
+                 "inputs": {"video": ["video", 0], "filename_prefix": filename_prefix, "format": "auto", "codec": "auto"}}
+
+
+def build_ltx25_t2v(prompt, width, height, frames, seed, fps=24, negative=None,
+                    filename_prefix="video/localvidgen/job", **_):
+    width, height = _snap(width, 32, 256), _snap(height, 32, 256)
+    frames = _frames(frames, 8, 9, 241)
+    g = {}
+    _ltx25_common(g, prompt, fps, negative)
+    g["latent1"] = {"class_type": "EmptyLTXVLatentVideo",
+                    "inputs": {"width": width // 2, "height": height // 2, "length": frames, "batch_size": 1}}
+    g["audio_latent"] = {"class_type": "LTXVEmptyLatentAudio",
+                         "inputs": {"frames_number": frames, "frame_rate": int(fps), "batch_size": 1, "audio_vae": ["audio_vae", 0]}}
+    g["concat1"] = {"class_type": "LTXVConcatAVLatent",
+                    "inputs": {"video_latent": ["latent1", 0], "audio_latent": ["audio_latent", 0]}}
+    _ltx25_sampler(g, "1", LTX25_STAGE1_SIGMAS, seed, ["concat1", 0])
+    g["up"] = {"class_type": "LTXVLatentUpsampler",
+               "inputs": {"samples": ["sep1", 0], "upscale_model": ["upscaler", 0], "vae": ["vae", 0]}}
+    g["concat2"] = {"class_type": "LTXVConcatAVLatent", "inputs": {"video_latent": ["up", 0], "audio_latent": ["sep1", 1]}}
+    _ltx25_sampler(g, "2", LTX25_STAGE2_SIGMAS, 42, ["concat2", 0])
+    _ltx25_finish(g, fps, filename_prefix)
+    return g
+
+
+def build_ltx25_i2v(prompt, image, width, height, frames, seed, fps=24, negative=None,
+                    filename_prefix="video/localvidgen/job", **_):
+    width, height = _snap(width, 32, 256), _snap(height, 32, 256)
+    frames = _frames(frames, 8, 9, 241)
+    g = {}
+    _ltx25_common(g, prompt, fps, negative)
+    g["img"] = {"class_type": "LoadImage", "inputs": {"image": image}}
+    g["img_fit"] = {"class_type": "ImageScale",
+                    "inputs": {"image": ["img", 0], "upscale_method": "lanczos", "width": width, "height": height, "crop": "center"}}
+    g["img_edge"] = {"class_type": "ResizeImagesByLongerEdge", "inputs": {"images": ["img_fit", 0], "longer_edge": 1536}}
+    g["img_pre"] = {"class_type": "LTXVPreprocess", "inputs": {"image": ["img_edge", 0], "img_compression": 18}}
+    g["latent1"] = {"class_type": "EmptyLTXVLatentVideo",
+                    "inputs": {"width": width // 2, "height": height // 2, "length": frames, "batch_size": 1}}
+    g["i2v1"] = {"class_type": "LTXVImgToVideoInplace",
+                 "inputs": {"vae": ["vae", 0], "image": ["img_pre", 0], "latent": ["latent1", 0], "strength": 0.7, "bypass": False}}
+    g["audio_latent"] = {"class_type": "LTXVEmptyLatentAudio",
+                         "inputs": {"frames_number": frames, "frame_rate": int(fps), "batch_size": 1, "audio_vae": ["audio_vae", 0]}}
+    g["concat1"] = {"class_type": "LTXVConcatAVLatent",
+                    "inputs": {"video_latent": ["i2v1", 0], "audio_latent": ["audio_latent", 0]}}
+    _ltx25_sampler(g, "1", LTX25_STAGE1_SIGMAS, seed, ["concat1", 0])
+    g["up"] = {"class_type": "LTXVLatentUpsampler",
+               "inputs": {"samples": ["sep1", 0], "upscale_model": ["upscaler", 0], "vae": ["vae", 0]}}
+    g["i2v2"] = {"class_type": "LTXVImgToVideoInplace",
+                 "inputs": {"vae": ["vae", 0], "image": ["img_pre", 0], "latent": ["up", 0], "strength": 1.0, "bypass": False}}
+    g["concat2"] = {"class_type": "LTXVConcatAVLatent", "inputs": {"video_latent": ["i2v2", 0], "audio_latent": ["sep1", 1]}}
+    _ltx25_sampler(g, "2", LTX25_STAGE2_SIGMAS, 42, ["concat2", 0])
+    _ltx25_finish(g, fps, filename_prefix)
     return g
 
 
@@ -345,6 +483,10 @@ def build(mode, params, filename_prefix):
         return build_ltx2_t2v(**kw)
     if mode == "ltx2_i2v":
         return build_ltx2_i2v(**kw)
+    if mode == "ltx25_t2v":
+        return build_ltx25_t2v(**kw)
+    if mode == "ltx25_i2v":
+        return build_ltx25_i2v(**kw)
     if mode in ("wan22_t2v", "wan22_t2v_hq", "wan22_t2i", "wan22_t2i_hq"):
         return build_wan22(hq=mode.endswith("_hq"), output=preset["output"], **kw)
     if mode == "wan22_i2i":

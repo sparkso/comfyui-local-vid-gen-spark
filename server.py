@@ -231,12 +231,12 @@ def find_output(history_entry):
     for node_out in (history_entry.get("outputs") or {}).values():
         for key in ("images", "video", "videos", "gifs"):
             for item in node_out.get(key) or []:
-                if not isinstance(item, dict):
-                    continue
+                if not isinstance(item, dict) or item.get("type", "output") != "output":
+                    continue  # LoadVideo/LoadImage echo their *input* file here; only saved outputs count
                 fn = str(item.get("filename", "")).lower()
                 if fn.endswith(VIDEO_EXTS):
                     return item
-                if fn.endswith(IMAGE_EXTS) and item.get("type", "output") == "output":
+                if fn.endswith(IMAGE_EXTS):
                     fallback = fallback or item
     return fallback
 
@@ -585,6 +585,58 @@ def api_extend(job_id):
         job = submit_job(params, frame, extra={"parent": job_id, "chain_index": (parent.get("chain_index") or 0) + 1})
     except (requests.RequestException, RuntimeError, ValueError) as e:
         return jsonify({"error": str(e)}), 502
+    return jsonify(job)
+
+
+def comfy_upload_file(path: Path):
+    """Any file (mp4 included) into ComfyUI's input dir; LoadVideo reads from there."""
+    with open(path, "rb") as fh:
+        r = requests.post(f"{COMFY}/upload/image", files={"image": (path.name, fh)},
+                          data={"overwrite": "true", "type": "input"}, timeout=600)
+    r.raise_for_status()
+    return r.json()["name"]
+
+
+@app.post("/api/jobs/<job_id>/faceswap")
+def api_faceswap(job_id):
+    """Post-process a finished clip: ReActor swaps the reference face into every frame. Multipart 'face' optional;
+    falls back to the clip's own start image (i2v jobs) or its parent's."""
+    parent = STORE.get(job_id) or abort(404)
+    if parent.get("status") != "done" or not parent.get("file") or Path(parent["file"]).suffix.lower() in IMAGE_EXTS:
+        return jsonify({"error": "job must be a finished video"}), 400
+    face_path = None
+    up = request.files.get("face")
+    if up and up.filename:
+        face_path = UPLOADS / f"face-{uuid.uuid4().hex[:8]}{Path(up.filename).suffix.lower() or '.png'}"
+        up.save(face_path)
+    else:
+        cur = parent
+        while cur and not face_path:
+            if cur.get("image_local") and not cur["image_local"].endswith("-last.png") and (UPLOADS / cur["image_local"]).exists():
+                face_path = UPLOADS / cur["image_local"]
+            cur = STORE.get(cur["parent"]) if cur.get("parent") else None
+    if not face_path:
+        return jsonify({"error": "no reference face: upload one"}), 400
+    restore = (request.form.get("restore", "1") != "0")
+    try:
+        video_name = comfy_upload_file(OUTPUTS / parent["file"])
+        face_name = comfy_upload_image(face_path)
+        job_id_new = datetime.now().strftime("%Y%m%d-%H%M%S") + "-fs" + uuid.uuid4().hex[:2]
+        graph = workflows.build_faceswap(video_name, face_name, restore=restore,
+                                         filename_prefix=f"video/localvidgen/{job_id_new}")
+        prompt_id = comfy_submit(graph)
+    except (requests.RequestException, RuntimeError) as e:
+        return jsonify({"error": str(e)}), 502
+    job = {
+        "id": job_id_new, "prompt_id": prompt_id, "status": "queued", "created_at": now_iso(),
+        "mode": "faceswap", "task": "fix", "output": "video",
+        "prompt": f"Face fix of {job_id}: " + parent.get("prompt", "")[:200], "negative": "",
+        "width": parent.get("width"), "height": parent.get("height"), "frames": parent.get("frames"),
+        "fps": parent.get("fps"), "seed": 0, "image": face_name, "image_local": face_path.name,
+        "faceswap_of": job_id, "parent": parent.get("parent"), "chain_index": parent.get("chain_index"),
+    }
+    STORE.add(job)
+    log(f"faceswap {job_id} -> {job_id_new} (prompt {prompt_id})")
     return jsonify(job)
 
 

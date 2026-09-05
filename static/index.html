@@ -179,7 +179,7 @@ function setTask(k, preferredMode) {
   task = k;
   document.querySelectorAll('#tasks button').forEach(b => b.classList.toggle('active', b.dataset.task === k));
   const m = $('#mode'); m.innerHTML = '';
-  for (const [id, p] of Object.entries(PRESETS)) if (p.task === k) m.append(new Option(p.label, id));
+  for (const [id, p] of Object.entries(PRESETS)) if (p.task === k && !p.hidden) m.append(new Option(p.label, id));
   if (preferredMode && PRESETS[preferredMode] && PRESETS[preferredMode].task === k) m.value = preferredMode;
   onMode();
 }
@@ -281,12 +281,33 @@ async function refreshJobs() {
   try { jobs = await fetch('/api/jobs').then(r => r.json()); } catch { return; }
   renderJobs();
 }
+const RENDERED = new Map(); // job id -> JSON snapshot of what its card was built from
 function renderJobs() {
   const box = $('#jobs'); const active = jobs.filter(j => ['queued', 'running'].includes(j.status)).length;
   $('#njobs').textContent = jobs.length ? `(${jobs.length}${active ? `, ${active} active` : ''})` : '';
   $('#nojobs').hidden = jobs.length > 0;
-  const open = new Set([...box.querySelectorAll('.prompt.open')].map(el => el.dataset.id));
-  box.innerHTML = jobs.map(j => {
+  // Incremental DOM update: cards whose data is unchanged are left untouched so playing videos keep playing.
+  jobs.forEach(j => { if (j.progress) delete j.progress.age; }); // age changes every poll; not worth a rebuild
+  const wanted = new Set(jobs.map(j => j.id));
+  for (const el of [...box.children]) if (!wanted.has(el.dataset.id)) { el.remove(); RENDERED.delete(el.dataset.id); }
+  let cursor = box.firstElementChild;
+  for (const j of jobs) {
+    const snap = JSON.stringify(j);
+    let el = box.querySelector(`.job[data-id="${j.id}"]`);
+    if (el && RENDERED.get(j.id) === snap) { cursor = el.nextElementSibling; continue; }
+    const open = el ? el.querySelector('.prompt.open') !== null : false;
+    const fresh = buildCard(j, open);
+    if (el) { el.replaceWith(fresh); } else { box.insertBefore(fresh, cursor); }
+    RENDERED.set(j.id, snap); cursor = fresh.nextElementSibling;
+  }
+}
+function buildCard(j, open) {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = cardHTML(j, open ? new Set([j.id]) : new Set());
+  return wrap.firstElementChild;
+}
+function cardHTML(j, open) {
+  return [j].map(j => {
     const p = PRESETS[j.mode] || {};
     const label = (TASKS[j.task || p.task] ? TASKS[j.task || p.task] + ' · ' : '') + (p.label || j.mode);
     let prog = '';
@@ -305,12 +326,13 @@ function renderJobs() {
       <div class="prompt ${open.has(j.id) ? 'open' : ''}" data-id="${j.id}" onclick="this.classList.toggle('open')" title="click to expand">${esc(j.prompt)}</div>
       ${prog}
       ${j.error ? `<div class="err">${esc(j.error)}</div>` : ''}${j.last_error ? `<div class="err">${esc(j.last_error)}</div>` : ''}
-      <div class="meta">${j.parent ? `<span>↳ shot ${(j.chain_index || 0) + 1}, continues ${esc(j.parent)}</span>` : ''}${j.stitched ? `<span>🧵 ${j.stitched.length} clips</span>` : ''}${j.width ? `<span>${j.width}×${j.height}</span>` : ''}${j.frames > 1 ? `<span>${j.frames}f @ ${j.fps}fps</span>` : ''}${j.strength ? `<span>strength ${j.strength}</span>` : ''}<span>seed ${j.seed}</span>${j.elapsed ? `<span>⏱ ${fmtSecs(j.elapsed)}</span>` : ''}${j.size ? `<span>${fmtBytes(j.size)}</span>` : ''}<span>${new Date(j.created_at).toLocaleString()}</span>${tg}</div>
+      <div class="meta">${j.faceswap_of ? `<span>🙂 face-fixed from ${esc(j.faceswap_of)}</span>` : ''}${j.parent ? `<span>↳ shot ${(j.chain_index || 0) + 1}, continues ${esc(j.parent)}</span>` : ''}${j.stitched ? `<span>🧵 ${j.stitched.length} clips</span>` : ''}${j.width ? `<span>${j.width}×${j.height}</span>` : ''}${j.frames > 1 ? `<span>${j.frames}f @ ${j.fps}fps</span>` : ''}${j.strength ? `<span>strength ${j.strength}</span>` : ''}<span>seed ${j.seed}</span>${j.elapsed ? `<span>⏱ ${fmtSecs(j.elapsed)}</span>` : ''}${j.size ? `<span>${fmtBytes(j.size)}</span>` : ''}<span>${new Date(j.created_at).toLocaleString()}</span>${tg}</div>
       <div class="actions">
         ${['queued', 'running'].includes(j.status) ? `<button class="small danger" onclick="act('${j.id}','cancel')">✖ cancel</button>` : ''}
         ${j.file ? `<a href="/videos/${j.file}" download="${j.file}"><button class="small">⬇ download</button></a><button class="small" onclick="act('${j.id}','telegram')">📨 Telegram</button>` : ''}
         ${j.file && isImg(j.file) ? `<button class="small" onclick="useAsInput('${j.id}','i2v')">🎬 animate</button><button class="small" onclick="useAsInput('${j.id}','i2i')">🎨 restyle</button>` : ''}
         ${j.file && !isImg(j.file) && !j.stitched ? `<button class="small" onclick="extend('${j.id}')">➕ extend (next shot)</button>` : ''}
+        ${j.file && !isImg(j.file) && j.mode !== 'faceswap' ? `<button class="small" onclick="fixFace('${j.id}')" title="ReActor: swap the reference face into every frame">🙂 fix face</button>` : ''}
         ${j.file && j.parent ? `<button class="small" onclick="stitchChain('${j.id}')">🧵 stitch chain</button>` : ''}
         ${!j.imported ? `<button class="small" onclick="reuse('${j.id}')">✎ edit &amp; reuse</button><button class="small" onclick="rerun('${j.id}')">↻ rerun (new seed)</button>` : ''}
         ${!['queued', 'running'].includes(j.status) ? `<button class="small danger" onclick="del('${j.id}')">🗑</button>` : ''}
@@ -333,6 +355,20 @@ async function extend(id) {
     body: JSON.stringify({ prompt, frames: j.frames, mode: 'ltx2_i2v' }) });
   const res = await r.json();
   toast(r.ok ? 'Continuation queued (LTX-2 image-to-video from last frame)' : res.error, !r.ok); refreshJobs();
+}
+async function fixFace(id) {
+  const j = jobs.find(x => x.id === id); if (!j) return;
+  const hasRef = !!(j.image_local && !j.image_local.endsWith('-last.png')) || !!j.parent;
+  const fd = new FormData();
+  if (!hasRef || !window.confirm('Use this clip’s own start photo as the reference face?\nCancel to pick a different photo.')) {
+    const pick = document.createElement('input'); pick.type = 'file'; pick.accept = 'image/*';
+    const file = await new Promise(res => { pick.onchange = () => res(pick.files[0]); pick.click(); });
+    if (!file) return; fd.append('face', file);
+  }
+  toast('Uploading clip + face to White-PC…');
+  const r = await fetch(`/api/jobs/${id}/faceswap`, { method: 'POST', body: fd });
+  const res = await r.json();
+  toast(r.ok ? 'Face fix queued (ReActor)' : res.error, !r.ok); refreshJobs();
 }
 async function stitchChain(id) {
   const chain = []; let cur = jobs.find(x => x.id === id);

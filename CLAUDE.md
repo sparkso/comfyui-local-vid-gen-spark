@@ -18,8 +18,12 @@ delivery, all of which lived in `/tmp` and was lost on reboot).
   ComfyUI progress events. Job state is `data/jobs.json`; finished videos are `data/outputs/<job_id>.mp4`;
   uploaded i2v stills are `data/uploads/`. `data/` is gitignored and lives only on tigerclaw.
 - `workflows.py` - ComfyUI **API-format** graph builders plus the UI `PRESETS` (keyed by pipeline id, each
-  tagged with a `task`: t2i / t2v / i2i / i2v). Video: `ltx2_t2v`, `ltx2_i2v`, `wan22_t2v`, `wan22_t2v_hq`,
-  `wan22_5b_t2v`, `wan22_5b_i2v`. Image: `wan22_t2i`, `wan22_t2i_hq` (Wan 14B at length=1) and `wan22_i2i`
+  tagged with a `task`: t2i / t2v / i2i / i2v, plus hidden `fix` for post-processing). Video: `ltx25_t2v`,
+  `ltx25_i2v` (LTX-2.5 22B distilled, flattened from ComfyUI's bundled `video_ltx2_5_*` templates: UNETLoader +
+  two VAELoaders + CLIPLoader type `ltxv` with the Gemma 4 encoder, LTXVDualCFGGuider, both stages take
+  SamplerCustomAdvanced slot 0), `ltx2_t2v`, `ltx2_i2v`, `wan22_t2v`, `wan22_t2v_hq`, `wan22_5b_t2v`,
+  `wan22_5b_i2v`. Post: `faceswap` (ComfyUI-ReActor, installed 2026-09-05 in
+  `D:\Ai_apps\ComfyUI\custom_nodes`; needs a ComfyUI app restart to register after install). Image: `wan22_t2i`, `wan22_t2i_hq` (Wan 14B at length=1) and `wan22_i2i`
   (VAE-encode + partial denoise with the low-noise expert, `strength` = denoise). No dedicated image model
   (Flux, Qwen-Image, SDXL) is installed on White-PC; their text encoders are, so adding one is a model download
   plus a new builder. Graphs are hand-flattened from the UI-format template workflows on tigerclaw
@@ -51,6 +55,8 @@ SSH to tigerclaw needs password auth forced, otherwise macOS keychain keys trigg
   progress messages are addressed to us.
 - **Poll**: a job is `queued` while its prompt_id is in `/queue` pending, `running` while in running, then the
   poller reads `/history/<prompt_id>`; a missing history entry after leaving the queue means ComfyUI restarted.
+  `find_output` must only accept items with `type == "output"`: LoadVideo/LoadImage echo their *input* file
+  under `outputs` and the face-swap job once downloaded its own input by mistake.
   The MP4 is pulled with `/view` and, if `auto_telegram` is on (`data/settings.json`), sent via the Telegram bot.
 - **Telegram creds are never in this repo**: bot token comes from `~/.openclaw/openclaw.json`
   (`channels.telegram.botToken`) and the chat id from `~/.openclaw/credentials/telegram-allowFrom.json`.
