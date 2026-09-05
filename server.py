@@ -142,6 +142,20 @@ def telegram_creds():
     return token, chat_id
 
 
+def video_dims(path: Path):
+    """width/height/duration via ffprobe (next to the configured ffmpeg); empty dict if unavailable."""
+    probe = CONFIG["ffmpeg"].replace("ffmpeg", "ffprobe")
+    try:
+        out = subprocess.run([probe, "-v", "error", "-select_streams", "v:0", "-show_entries",
+                              "stream=width,height:format=duration", "-of", "csv=p=0", str(path)],
+                             capture_output=True, text=True, timeout=30).stdout.split()
+        w, h = out[0].split(",")[:2]
+        dur = out[1] if len(out) > 1 else "0"
+        return {"width": int(w), "height": int(h), "duration": int(float(dur))}
+    except Exception:
+        return {}
+
+
 def telegram_send_video(path: Path, caption: str):
     token, chat_id = telegram_creds()
     if not token or not chat_id:
@@ -157,9 +171,12 @@ def telegram_send_video(path: Path, caption: str):
                     timeout=300,
                 )
             else:
+                # Without explicit width/height Telegram guesses the aspect and shows portrait clips squashed.
+                data = {"chat_id": chat_id, "caption": caption[:1000], "supports_streaming": "true"}
+                data.update(video_dims(path))
                 r = requests.post(
                     f"https://api.telegram.org/bot{token}/sendVideo",
-                    data={"chat_id": chat_id, "caption": caption[:1000], "supports_streaming": "true"},
+                    data=data,
                     files={"video": (path.name, fh, "video/mp4")},
                     timeout=300,
                 )

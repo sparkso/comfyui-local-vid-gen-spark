@@ -115,8 +115,10 @@ def telegram_video(token, path, caption):
     """Manual-post fallback: hand the owner the clip + caption so it can be posted from the phone."""
     if not token:
         return False
+    # Explicit width/height, or Telegram squashes portrait clips into the wrong aspect.
     r = subprocess.run(["curl", "-s", "-m", "300", "-X", "POST", f"https://api.telegram.org/bot{token}/sendVideo",
                         "-F", "chat_id=194069935", "-F", f"caption={caption}", "-F", "supports_streaming=true",
+                        "-F", f"width={WIDTH}", "-F", f"height={HEIGHT}", "-F", "duration=10",
                         "-F", f"video=@{path}"], capture_output=True, text=True)
     return '"ok":true' in r.stdout
 
