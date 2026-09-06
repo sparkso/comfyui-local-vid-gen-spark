@@ -25,7 +25,7 @@ browser ──> Flask dashboard (:5030) ──> ComfyUI API (:8000) on the GPU b
 | Text → Image | Wan 2.2 14B single-frame (4-step / 20-step) | no dedicated image model needed |
 | Image → Image | Wan 2.2 14B low-noise img2img | strength slider |
 | Extend | last frame of a clip → new image-to-video shot | chain shots into longer videos |
-| Stitch | join a chain into one MP4 (ffmpeg, audio fades at seams) | 2 × 10 s → 20 s verified |
+| Stitch | join a chain into one MP4 (ffmpeg); hard cut by default, or an xfade transition (dissolve, fadewhite, wipes, circleopen…) with audio crossfade at every seam | 2 × 10 s → 20 s verified |
 | Fix face | ReActor face swap across every frame + GFPGAN | optional custom node |
 
 Everything is submitted as **ComfyUI API-format graphs** built in `workflows.py`. No workflow JSON files are
@@ -114,7 +114,7 @@ to key auth). `whitepc.py` sleeps/wakes the GPU box via SSH and Wake-on-LAN; edi
 | POST | `/api/jobs` | multipart: `mode, prompt, width, height, frames, fps, seed, count, negative, strength, image` |
 | POST | `/api/jobs/<id>/extend` | JSON `{prompt, mode, frames, seed}` → new job from the last frame |
 | POST | `/api/jobs/<id>/faceswap` | multipart `face` (optional) → ReActor pass |
-| POST | `/api/stitch` | JSON `{ids:[...]}` → one MP4 |
+| POST | `/api/stitch` | JSON `{ids:[...], transition?: 'cut'|'dissolve'|..., duration?: 0.8}` → one MP4 |
 | POST | `/api/jobs/<id>/rerun`, `/cancel`, `/telegram` | |
 | DELETE | `/api/jobs/<id>` | remove job and file |
 | GET | `/videos/<file>` | serve an output |

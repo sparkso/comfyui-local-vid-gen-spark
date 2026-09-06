@@ -421,8 +421,39 @@ def extract_last_frame(video: Path) -> Path:
     return out
 
 
-def stitch_clips(paths, dest: Path, fade=0.12):
-    """Concatenate same-size clips; short audio fades at each seam avoid clicks without changing length."""
+TRANSITIONS = ["cut", "dissolve", "fade", "fadewhite", "fadeblack", "fadegrays", "smoothleft", "smoothright", "smoothup",
+               "smoothdown", "wipeleft", "wiperight", "wipeup", "wipedown", "slideleft", "slideright", "circleopen",
+               "circleclose", "circlecrop", "rectcrop", "hblur", "pixelize", "distance", "radial", "diagtl", "hlslice"]
+
+
+def clip_duration(path: Path) -> float:
+    out = subprocess.run([ffmpeg().replace("ffmpeg", "ffprobe"), "-v", "error", "-show_entries", "format=duration",
+                          "-of", "csv=p=0", str(path)], capture_output=True, text=True, timeout=60).stdout.strip()
+    return float(out or 0)
+
+
+def stitch_clips(paths, dest: Path, fade=0.12, transition="cut", duration=0.8):
+    """Concatenate same-size clips. transition='cut' keeps a hard cut with tiny audio fades (no length change);
+    any other name is an ffmpeg xfade effect overlapped `duration` seconds at every seam, with matching audio crossfades."""
+    if transition and transition != "cut":
+        if transition not in TRANSITIONS:
+            raise RuntimeError(f"unknown transition {transition}")
+        duration = max(0.2, min(3.0, float(duration)))
+        durs = [clip_duration(p) for p in paths]
+        args = [ffmpeg(), "-y", "-v", "error"]
+        for p in paths:
+            args += ["-i", str(p)]
+        fc, offset, v, a = [], 0.0, "[0:v]", "[0:a]"
+        for i in range(1, len(paths)):
+            offset += durs[i - 1] - duration
+            fc.append(f"{v}[{i}:v]xfade=transition={transition}:duration={duration}:offset={offset:.3f}[v{i}]")
+            fc.append(f"{a}[{i}:a]acrossfade=d={duration}:c1=tri:c2=tri[a{i}]")
+            v, a = f"[v{i}]", f"[a{i}]"
+        args += ["-filter_complex", ";".join(fc), "-map", v, "-map", a,
+                 "-c:v", "libx264", "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-c:a", "aac", "-b:a", "160k",
+                 "-movflags", "+faststart", str(dest)]
+        subprocess.run(args, check=True, timeout=1800)
+        return dest
     args = [ffmpeg(), "-y", "-v", "error"]
     for p in paths:
         args += ["-i", str(p)]
@@ -525,7 +556,7 @@ def api_status():
 
 @app.get("/api/presets")
 def api_presets():
-    return jsonify({"presets": workflows.PRESETS, "tasks": workflows.TASKS,
+    return jsonify({"presets": workflows.PRESETS, "tasks": workflows.TASKS, "transitions": TRANSITIONS,
                     "wan_negative": workflows.WAN_NEGATIVE_DEFAULT, "models": workflows.MODELS})
 
 
@@ -743,19 +774,22 @@ def api_stitch():
             return jsonify({"error": f"{i} is not a finished video"}), 400
         paths.append(OUTPUTS / j["file"])
     first = STORE.get(ids[0])
+    transition = (body.get("transition") or "cut").strip()
+    duration = float(body.get("duration") or 0.8)
     job_id = "story-" + datetime.now().strftime("%Y%m%d-%H%M%S")
     dest = OUTPUTS / f"{job_id}.mp4"
     try:
-        stitch_clips(paths, dest)
+        stitch_clips(paths, dest, transition=transition, duration=duration)
     except Exception as e:
         return jsonify({"error": f"stitch failed: {e}"}), 500
     total_frames = sum((STORE.get(i) or {}).get("frames") or 0 for i in ids)
     job = {"id": job_id, "prompt_id": None, "status": "done", "created_at": now_iso(), "finished_at": now_iso(),
            "mode": first["mode"], "task": "t2v", "output": "video",
-           "prompt": "Stitched: " + " → ".join((STORE.get(i) or {}).get("prompt", "")[:80] for i in ids),
+           "prompt": (f"Stitched ({transition}{'' if transition == 'cut' else f' {duration}s'}): "
+                      + " → ".join((STORE.get(i) or {}).get("prompt", "")[:80] for i in ids)),
            "negative": "", "width": first["width"], "height": first["height"], "frames": total_frames,
            "fps": first.get("fps"), "seed": first.get("seed"), "file": dest.name, "size": dest.stat().st_size,
-           "stitched": ids}
+           "stitched": ids, "transition": transition}
     STORE.add(job)
     log(f"stitched {ids} -> {dest.name}")
     if load_settings().get("auto_telegram"):

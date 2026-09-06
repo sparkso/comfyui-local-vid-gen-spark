@@ -147,9 +147,14 @@
   </section>
 
   <section class="panel">
-    <div class="tabs">
+    <div class="tabs" style="align-items:center;flex-wrap:wrap">
       <button type="button" class="active" data-tab="jobs">Jobs &amp; gallery <span id="njobs"></span></button>
       <button type="button" data-tab="lib">White-PC output folder</button>
+      <span class="spacer"></span>
+      <label class="switch" title="Applied at every seam when you press 'stitch chain'">seam transition
+        <select id="transition" style="width:auto;padding:4px 8px"></select>
+        <input type="number" id="transdur" value="0.8" min="0.2" max="3" step="0.1" style="width:64px;padding:4px 6px" title="seconds"> s
+      </label>
     </div>
     <div id="tab-jobs"><div class="jobs" id="jobs"></div><div class="empty" id="nojobs" hidden>No jobs yet. Write a prompt and hit Generate.</div></div>
     <div id="tab-lib" hidden>
@@ -176,6 +181,10 @@ const esc = s => (s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>'
 async function loadPresets() {
   const r = await fetch('/api/presets').then(r => r.json());
   PRESETS = r.presets; TASKS = r.tasks; WAN_NEG = r.wan_negative;
+  const ts = $('#transition'); ts.innerHTML = '';
+  (r.transitions || ['cut']).forEach(t => ts.append(new Option(t === 'cut' ? 'hard cut' : t, t)));
+  ts.value = localStorage.getItem('lvg.transition') || 'cut';
+  ts.onchange = () => localStorage.setItem('lvg.transition', ts.value);
   const tb = $('#tasks'); tb.innerHTML = '';
   for (const [k, label] of Object.entries(TASKS)) {
     const b = document.createElement('button'); b.type = 'button'; b.textContent = label; b.dataset.task = k;
@@ -389,9 +398,10 @@ async function stitchChain(id) {
   const chain = []; let cur = jobs.find(x => x.id === id);
   while (cur) { chain.unshift(cur.id); cur = cur.parent ? jobs.find(x => x.id === cur.parent) : null; }
   if (chain.length < 2) { toast('Nothing to stitch: no finished parent clip', true); return; }
-  if (!window.confirm(`Stitch ${chain.length} clips in order?\n${chain.join('\n')}`)) return;
+  const transition = $('#transition').value, duration = parseFloat($('#transdur').value) || 0.8;
+  if (!window.confirm(`Stitch ${chain.length} clips in order with "${transition === 'cut' ? 'hard cut' : transition + ' ' + duration + 's'}" at each seam?\n${chain.join('\n')}`)) return;
   toast('Stitching…');
-  const r = await fetch('/api/stitch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: chain }) });
+  const r = await fetch('/api/stitch', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ids: chain, transition, duration }) });
   const res = await r.json();
   toast(r.ok ? 'Stitched clip added to gallery' : res.error, !r.ok); refreshJobs();
 }
