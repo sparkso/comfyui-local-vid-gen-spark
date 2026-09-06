@@ -31,8 +31,8 @@ S3_PUBLIC = "https://locai.s3.ap-south-1.amazonaws.com"
 AWS = "/usr/local/bin/aws"
 MEM = Path.home() / ".claude/projects/-Users-sparkso-Code-vweeter-marketing/memory"
 HKT = timezone(timedelta(hours=8))
-MODE, WIDTH, HEIGHT, FRAMES = "ltx25_t2v", 704, 1280, 241
-RENDER_TIMEOUT = 25 * 60
+WIDTH, HEIGHT = 480, 832          # MiniMax H3 comfort zone on the 3090; LTX ideas use the same portrait size
+RENDER_TIMEOUT = 40 * 60          # per shot; a 15 s H3 shot is ~10 min
 
 
 def now():
@@ -118,7 +118,7 @@ def telegram_video(token, path, caption):
     # Explicit width/height, or Telegram squashes portrait clips into the wrong aspect.
     r = subprocess.run(["curl", "-s", "-m", "300", "-X", "POST", f"https://api.telegram.org/bot{token}/sendVideo",
                         "-F", "chat_id=194069935", "-F", f"caption={caption}", "-F", "supports_streaming=true",
-                        "-F", f"width={WIDTH}", "-F", f"height={HEIGHT}", "-F", "duration=10",
+                        "-F", f"width={WIDTH}", "-F", f"height={HEIGHT}",
                         "-F", f"video=@{path}"], capture_output=True, text=True)
     return '"ok":true' in r.stdout
 
@@ -141,24 +141,52 @@ def wake_whitepc():
     return "ComfyUI up" in r.stdout
 
 
-def render(idea):
-    form = urllib.parse.urlencode({"mode": MODE, "prompt": idea["prompt"], "width": WIDTH, "height": HEIGHT,
-                                   "frames": FRAMES, "fps": 24, "seed": int(hashlib.sha256(idea["slug"].encode()).hexdigest()[:8], 16) % 10**9,
-                                   "count": 1}).encode()
-    st, b = http(f"{DASH}/api/jobs", data=form, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=120)
-    if st != 200:
-        raise RuntimeError(f"submit failed {st}: {b}")
-    job_id = b[0]["id"]
+MODELS = {  # (t2v mode, i2v mode for continuation shots, frames for N seconds)
+    "ltx25": ("ltx25_t2v", "ltx25_i2v", lambda s: max(9, min(241, (round(s * 24) // 8) * 8 + 1))),
+    "minimax": ("minimax_t2v", "minimax_i2v", lambda s: (lambda n: n + (5 - (n % 17)) % 17)(max(5, round(s * 24)))),
+}
+
+
+def wait_job(job_id, timeout=RENDER_TIMEOUT):
     t0 = time.time()
-    while time.time() - t0 < RENDER_TIMEOUT:
+    while time.time() - t0 < timeout:
         st, jobs = http(f"{DASH}/api/jobs", timeout=30)
         j = next((x for x in jobs if x["id"] == job_id), None) if st == 200 else None
         if j and j["status"] == "done":
-            return job_id, j["file"]
+            return j
         if j and j["status"] in ("error", "cancelled"):
             raise RuntimeError(f"render {job_id} {j['status']}: {j.get('error')}")
         time.sleep(20)
     raise RuntimeError(f"render {job_id} timed out")
+
+
+def render(idea):
+    """One or more shots. Shot 1 is text-to-video; each later shot continues from the previous shot's last frame
+    (the dashboard's extend path); multi-shot results are stitched into one MP4 by the dashboard."""
+    shots = idea.get("shots") or [idea["prompt"]]
+    t2v, i2v, frames_for = MODELS[idea.get("model", "ltx25")]
+    frames = frames_for(idea.get("seconds", 10))
+    seed = int(hashlib.sha256(idea["slug"].encode()).hexdigest()[:8], 16) % 10**9
+    form = urllib.parse.urlencode({"mode": t2v, "prompt": shots[0], "width": WIDTH, "height": HEIGHT,
+                                   "frames": frames, "fps": 24, "seed": seed, "count": 1}).encode()
+    st, b = http(f"{DASH}/api/jobs", data=form, headers={"Content-Type": "application/x-www-form-urlencoded"}, timeout=180)
+    if st != 200:
+        raise RuntimeError(f"submit failed {st}: {b}")
+    ids = [b[0]["id"]]
+    job = wait_job(ids[0])
+    for n, prompt in enumerate(shots[1:], start=2):
+        st, b = http(f"{DASH}/api/jobs/{ids[-1]}/extend",
+                     json_body={"mode": i2v, "frames": frames, "seed": seed + n, "prompt": prompt}, timeout=300)
+        if st != 200:
+            raise RuntimeError(f"extend shot {n} failed {st}: {b}")
+        ids.append(b["id"])
+        job = wait_job(ids[-1])
+    if len(ids) > 1:
+        st, b = http(f"{DASH}/api/stitch", json_body={"ids": ids}, timeout=1200)
+        if st != 200:
+            raise RuntimeError(f"stitch failed {st}: {b}")
+        return b["id"], b["file"]
+    return ids[0], job["file"]
 
 
 def fetch_and_host(job_id, filename):
@@ -281,8 +309,9 @@ def main():
         log("idea bank empty")
         return 0
     idea = remaining[0]
+    idea.setdefault("punchline", idea.get("caption", ""))
     if a.dry_run:
-        print("would render:", idea["slug"], "|", idea["punchline"])
+        print("would render:", idea["slug"], "|", idea.get("model", "ltx25"), len(idea.get("shots") or [1]), "shot(s) |", idea["punchline"])
         return 0
     if not whitepc_online():
         log("White-PC offline, trying wake")
