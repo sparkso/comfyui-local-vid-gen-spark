@@ -1,79 +1,133 @@
 [
-  {"slug": "delete-the-app", "model": "minimax", "seconds": 15, "link": false,
-   "caption": "Everyone has one app they cannot delete.",
-   "shots": [
-    "Vertical phone-style video. A young woman in an oversized grey hoodie stands in a dark kitchen at 3 a.m., lit only by her phone, and whispers straight into the camera: \"I am going to delete this app in ten seconds. Watch what happens.\" She holds her thumb over a wobbling app icon on the screen, hand trembling, breathing fast, eyes wide, counting down under her breath: \"ten, nine, eight...\" The fridge hums, a clock ticks. Handheld selfie framing, slight shake, cinematic low light. Audio: her whispered countdown, the fridge hum, the clock.",
-    "Same young woman in the grey hoodie in the same dark 3 a.m. kitchen, phone in hand. She finally taps delete, gasps and drops the phone on the counter. The phone buzzes and glows, a small gold coin rolls out of the screen onto the counter, then another, then a clattering pile of gold coins spills across the counter. She stares, mouth open, picks the phone back up and whispers to the camera, defeated and delighted: \"...okay, one more game.\" Handheld selfie framing. Audio: the tap, her gasp, coins clinking and rolling across the counter, her whispered last line."
-   ]},
-  {"slug": "grandma-portfolio", "model": "minimax", "seconds": 15, "link": true,
-   "caption": "Grandma's portfolio is up. https://www.vweeter.com/more-apps.html",
-   "shots": [
-    "A silver-haired Chinese grandmother in a floral cardigan sits at a kitchen table with a cup of tea and looks straight into the camera, deadpan: \"My grandson says he lost everything on a coin with a dog on it.\" Beside her, her grandson, a man in his twenties in a hoodie, slowly sinks lower in his chair, hiding his face behind his hand. Warm afternoon light, static medium shot at table height. Audio: her calm voice, the tea cup set down, the chair creaking, a wall clock.",
-    "Same grandmother in the floral cardigan and the same grandson at the same kitchen table. She pulls an old flip phone from her cardigan pocket, opens it and turns it to him: \"I made forty dollars this week matching bitcoins on a puzzle game. Would you like to see?\" He leans in, stunned, eyes wide. She pats his hand and sips her tea. He looks at the camera in disbelief. Static medium shot. Audio: the flip phone snapping open, cheerful game chimes from the phone, her gentle voice, his stunned silence, then a small laugh."
-   ]},
-  {"slug": "cat-trader", "model": "minimax", "seconds": 15, "link": false,
-   "caption": "The cat has a better strategy.",
-   "shots": [
-    "A haggard man in a bathrobe with red eyes sits in a dark room surrounded by six glowing monitors full of candlestick charts, and says to the camera in a hoarse whisper: \"Do not go to sleep. That is rule one.\" Sunrise light creeps through the blinds behind him. A fat ginger cat jumps onto the desk, walks across the keyboard and sits on it while the man watches helplessly, too tired to move. Static medium shot, monitor glow, dust in the light. Audio: his hoarse whisper, keyboard keys clacking under the cat, the fans of the computers, birds starting outside.",
-    "Same haggard man in the bathrobe and the same fat ginger cat on the keyboard in the same monitor-lit room at sunrise. Every chart on every monitor flips from red to bright green at once. The cat yawns. The man slides out of his chair onto the floor, laughing weakly, and croaks: \"Twelve hours. Twelve hours and the cat did it in one paw.\" The cat curls up on the keyboard and closes its eyes. Static medium shot. Audio: a chorus of notification pings, his weak laugh, the cat purring loudly."
-   ]},
-  {"slug": "best-man-toast", "model": "minimax", "seconds": 15, "link": false,
-   "caption": "The one time selling the bottom was worth it.",
-   "shots": [
-    "A wedding reception in a bright hall with round tables and flowers. The best man, a man in his thirties in a navy suit, taps his glass, takes the microphone and says: \"Before I toast the bride and groom, I need to talk about the groom's coin collection.\" The guests gasp and laugh, the groom at the top table covers his face with both hands, the bride turns to him with raised eyebrows. Steadicam slow push-in on the best man. Audio: glass tapping, his voice through the microphone, gasps and laughter, cutlery.",
-    "Same wedding reception, same best man with the microphone, same groom and bride at the top table. The best man grins and continues: \"Last winter he finally sold every single one of them... to buy the ring.\" The room erupts in cheers and applause, the bride laughs and kisses the groom, the groom stands up and takes a bow with his arms spread. Camera pans from the best man to the top table. Audio: his voice through the microphone, the eruption of cheering and clapping, a glass clinking, music starting."
-   ]},
-  {"slug": "elevator-pitch", "model": "minimax", "seconds": 15, "link": false,
-   "caption": "Twenty floors was enough.",
-   "shots": [
-    "Inside a glass office elevator. A nervous young man in a rumpled shirt holding a phone turns to a stern grey-haired woman in a black suit and blurts: \"I have twenty floors to explain why my game pays people real bitcoin.\" She looks at her watch, then at him, and says one word: \"Go.\" He starts talking fast, gesturing, showing her the phone, while the floor numbers climb. Static two-shot inside the elevator, city visible through the glass. Audio: the elevator hum, floor chimes, his fast nervous pitch, her single calm word.",
-    "Same glass elevator, same nervous young man and stern woman in the black suit. The doors open on the top floor. She steps out, stops, turns back and asks: \"How much has it paid you?\" He answers: \"More than my last job.\" She steps back into the elevator, presses the button to close the doors and says: \"Start again from the beginning.\" He grins in disbelief as the doors close. Static two-shot. Audio: the doors sliding open and closed, her heels on the floor, both voices, the elevator chime."
-   ]},
-  {"slug": "street-interview", "model": "minimax", "seconds": 15, "link": true,
-   "caption": "Street interviews never lie. https://www.vweeter.com/cryptopop.html",
-   "shots": [
-    "A street interview on a crowded Hong Kong street at night, neon signs and trams behind. A young interviewer with a handheld microphone stops a man in a football shirt and asks: \"What is the dumbest thing you bought this year?\" The man thinks, winces and admits: \"A coin named after a frog.\" People passing behind them laugh. Handheld documentary style, medium two-shot. Audio: the interviewer's question, his sheepish answer, tram bells, traffic, street chatter.",
-    "Same Hong Kong street at night, same interviewer with the microphone and the same man in the football shirt. The interviewer asks: \"And the smartest?\" The man pulls out his phone and shows the screen with a bright colourful puzzle game: \"I got paid to play this.\" The interviewer slowly turns and stares straight into the camera without saying a word, holding the microphone. Handheld medium two-shot ending on the interviewer's face. Audio: both voices, cheerful game chimes from the phone, tram bells, the crowd."
-   ]},
-  {"slug": "time-traveller", "model": "minimax", "seconds": 15, "link": false,
-   "caption": "The time traveller was disappointed.",
-   "shots": [
-    "A man in a scorched silver jumpsuit with wild hair stumbles out of a smoking red phone box into a quiet modern café, grabs the barista by the shoulders and shouts: \"What year is it? Did bitcoin hit a million?\" Customers stare over their laptops. The barista, a calm young woman with an apron and a nose ring, blinks at him. Handheld medium shot, smoke drifting, warm café light. Audio: the phone box hissing, his desperate shout, cups rattling, an espresso machine.",
-    "Same café, same man in the scorched silver jumpsuit and the same calm barista. She wipes the counter and says flatly: \"No. But my gran earns a bit of it playing a puzzle game.\" The man's face falls, he collapses into a chair and mutters: \"That is... actually smarter than what I did.\" The barista slides him a coffee. Static medium two-shot. Audio: her flat voice, the chair scraping, his mutter, the cup sliding across the counter, the espresso machine."
-   ]},
-  {"slug": "airport-gate", "model": "minimax", "seconds": 15, "link": false,
-   "caption": "Everyone on that flight was long.",
-   "shots": [
-    "An airport departure gate, passengers queueing. A gate agent in uniform leans into the PA microphone and announces, bored: \"Attention passengers. The gentleman who just checked his portfolio in the toilet, please return to gate twelve.\" Every head in the queue turns. A man in a crumpled suit sprints out of the restroom clutching his phone, tie flying, and runs toward the gate. Wide shot of the gate, fluorescent light. Audio: the PA announcement with its echo, murmurs, his running footsteps, a suitcase wheel.",
-    "Inside the aeroplane cabin, the same man in the crumpled suit squeezes into his seat, out of breath. Every passenger around him is silently staring at their phone. The captain's voice comes over the intercom: \"Good morning. This is your captain. Bitcoin is up two percent. We are cleared for take-off.\" The whole cabin cheers and raises their phones. The man exhales and smiles. Medium shot down the aisle. Audio: seatbelt clicks, the captain's calm intercom voice, the cabin cheering, engines spooling up."
-   ]},
-  {"slug": "first-date", "model": "minimax", "seconds": 15, "link": false,
-   "caption": "Found the one.",
-   "shots": [
-    "A candlelit first date in a small Italian restaurant. A woman in a green dress asks the man across the table: \"So what do you do?\" He straightens his jacket and says proudly: \"I am a professional airdrop farmer.\" Awkward silence. A waiter holding a pepper grinder freezes mid-grind beside them. Static two-shot, candlelight, soft jazz. Audio: her question, his proud answer, the pepper grinder stopping, soft restaurant jazz, a fork set down.",
-    "Same candlelit Italian restaurant, same couple and the same frozen waiter. The woman leans in and says: \"I earn bitcoin playing puzzle games on the bus.\" The man drops to one knee beside the table and holds out the breadstick like a ring: \"Marry me.\" The waiter faints backwards into a plant. She laughs and takes the breadstick. Static two-shot widening slightly. Audio: her line, his chair scraping, his proposal, the waiter thudding into the plant, her laughter, the jazz."
-   ]},
-  {"slug": "lie-detector", "model": "minimax", "seconds": 15, "link": true,
-   "caption": "The polygraph is bullish on honesty. https://www.vweeter.com/bitcoin-mega-merge.html",
-   "shots": [
-    "A grey interrogation room. A sweating man in a white shirt is strapped to a polygraph machine with wires on his fingers. A stern examiner in glasses asks: \"Did you buy the top?\" The man says: \"No.\" The polygraph needles go wild, scribbling violently, paper spilling onto the floor. The examiner looks over his glasses. Static two-shot, harsh overhead light. Audio: the question, the answer, the needles scratching frantically, paper unspooling.",
-    "Same grey interrogation room, same sweating man wired to the polygraph, same examiner in glasses. The examiner asks: \"Did you enjoy losing it?\" The man pauses, then says quietly: \"Yes. It was kind of fun.\" The needles go perfectly calm and flat. The examiner slowly turns to look straight into the camera. Static two-shot ending on the examiner's face. Audio: the question, the quiet answer, the needles falling silent, the hum of the light."
-   ]},
-  {"slug": "office-alarm", "model": "minimax", "seconds": 15, "link": false,
-   "caption": "The intern was the only adult in the room.",
-   "shots": [
-    "An open-plan office. A red alarm light spins and a siren blares. Everyone dives under their desks in panic, papers flying. A red-faced boss in a waistcoat runs down the aisle shouting: \"Bitcoin dropped two percent! Two percent!\" One young intern in a yellow cardigan stays calmly in her chair, feet up, playing a colourful game on her phone. Wide tracking shot down the aisle. Audio: the siren, the boss shouting, chairs toppling, cheerful game chimes from her phone.",
-    "Same open-plan office with the red alarm still spinning, same boss in the waistcoat and the same intern in the yellow cardigan playing her phone. The boss stops beside her, panting: \"Why are you so calm?\" She doesn't look up: \"I get paid in crypto whether it drops or not.\" The boss stares, then quietly sits down on the floor next to her chair and watches her play. Static medium shot. Audio: the siren winding down, his panting question, her calm answer, game chimes, the office going quiet."
-   ]},
-  {"slug": "fortune-teller", "model": "minimax", "seconds": 15, "link": false,
-   "caption": "The crystal ball had a chart in it.",
-   "shots": [
-    "A dim fortune teller's tent with red drapes and candles. A young man in a hoodie sits across from an old fortune teller with rings on every finger and a crystal ball. He leans in and whispers: \"Just tell me when to sell.\" She waves her hands over the crystal ball, which glows green, then red, then green, a tiny candlestick chart flickering inside it. Static two-shot, candlelight flicker. Audio: his whisper, her bracelets jingling, a low mystical hum from the ball, a candle sputtering.",
-    "Same dim tent, same fortune teller with the crystal ball and the same young man in the hoodie. She stops, looks up at him and says: \"The ball says you already sold. At the bottom. Twice.\" He slumps. She pats the crystal ball: \"It also says your cousin earns more playing a puzzle game.\" He stands up and stomps out through the drapes. Static two-shot. Audio: her raspy voice, his groan, the drapes swishing, the mystical hum fading."
-   ]},
-  {"slug": "hamster-cheeks", "model": "minimax", "seconds": 10, "link": false,
-   "caption": "Diversifying across twelve chain leaders.",
-   "shots": [
-    "A round golden hamster on a table covered in piles of different seeds and nuts stuffs its cheek pouches fuller and fuller, cheeks bulging enormously, then tries to force in one more sunflower seed which keeps popping back out. It looks at the camera with bulging cheeks. Macro close-up, soft daylight, static camera. Audio: tiny nibbling and rustling, a seed pinging off the table, a quiet squeak."
-   ]}
+  {
+    "slug": "delete-the-app",
+    "model": "minimax",
+    "seconds": 15,
+    "link": false,
+    "caption": "Everyone has one app they cannot delete.",
+    "shots": [
+      "Vertical phone-style video. A young woman in an oversized grey hoodie stands in a dark kitchen at 3 a.m., lit only by her phone, and whispers straight into the camera: \"I am going to delete this app in ten seconds. Watch what happens.\" She holds her thumb over a wobbling app icon on the screen, hand trembling, breathing fast, eyes wide, counting down under her breath: \"ten, nine, eight...\" The fridge hums, a clock ticks. Handheld selfie framing, slight shake, cinematic low light. Audio: her whispered countdown, the fridge hum, the clock.",
+      "Same young woman in the grey hoodie in the same dark 3 a.m. kitchen, phone in hand. She finally taps delete, gasps and drops the phone on the counter. The phone buzzes and glows, a small gold coin rolls out of the screen onto the counter, then another, then a clattering pile of gold coins spills across the counter. She stares, mouth open, picks the phone back up and whispers to the camera, defeated and delighted: \"...okay, one more game.\" Handheld selfie framing. Audio: the tap, her gasp, coins clinking and rolling across the counter, her whispered last line."
+    ]
+  },
+  {
+    "slug": "grandma-portfolio",
+    "model": "minimax",
+    "seconds": 15,
+    "link": true,
+    "caption": "Grandma's portfolio is up. https://www.vweeter.com/more-apps.html",
+    "shots": [
+      "A silver-haired Chinese grandmother in a floral cardigan sits at a kitchen table with a cup of tea and looks straight into the camera, deadpan: \"My grandson says he lost everything on a coin with a dog on it.\" Beside her, her grandson, a man in his twenties in a hoodie, slowly sinks lower in his chair, hiding his face behind his hand. Warm afternoon light, static medium shot at table height. Audio: her calm voice, the tea cup set down, the chair creaking, a wall clock.",
+      "Same grandmother in the floral cardigan and the same grandson at the same kitchen table. She pulls an old flip phone from her cardigan pocket, opens it and turns it to him: \"I made forty dollars this week matching bitcoins on a puzzle game. Would you like to see?\" He leans in, stunned, eyes wide. She pats his hand and sips her tea. He looks at the camera in disbelief. Static medium shot. Audio: the flip phone snapping open, cheerful game chimes from the phone, her gentle voice, his stunned silence, then a small laugh."
+    ]
+  },
+  {
+    "slug": "cat-trader",
+    "model": "minimax",
+    "seconds": 15,
+    "link": false,
+    "caption": "The cat has a better strategy.",
+    "shots": [
+      "A haggard man in a bathrobe with red eyes sits in a dark room surrounded by six glowing monitors full of candlestick charts, and says to the camera in a hoarse whisper: \"Do not go to sleep. That is rule one.\" Sunrise light creeps through the blinds behind him. A fat ginger cat jumps onto the desk, walks across the keyboard and sits on it while the man watches helplessly, too tired to move. Static medium shot, monitor glow, dust in the light. Audio: his hoarse whisper, keyboard keys clacking under the cat, the fans of the computers, birds starting outside.",
+      "Same haggard man in the bathrobe and the same fat ginger cat on the keyboard in the same monitor-lit room at sunrise. Every chart on every monitor flips from red to bright green at once. The cat yawns. The man slides out of his chair onto the floor, laughing weakly, and croaks: \"Twelve hours. Twelve hours and the cat did it in one paw.\" The cat curls up on the keyboard and closes its eyes. Static medium shot. Audio: a chorus of notification pings, his weak laugh, the cat purring loudly."
+    ]
+  },
+  {
+    "slug": "elevator-pitch",
+    "model": "minimax",
+    "seconds": 15,
+    "link": false,
+    "caption": "Twenty floors was enough.",
+    "shots": [
+      "Inside a glass office elevator. A nervous young man in a rumpled shirt holding a phone turns to a stern grey-haired woman in a black suit and blurts: \"I have twenty floors to explain why my game pays people real bitcoin.\" She looks at her watch, then at him, and says one word: \"Go.\" He starts talking fast, gesturing, showing her the phone, while the floor numbers climb. Static two-shot inside the elevator, city visible through the glass. Audio: the elevator hum, floor chimes, his fast nervous pitch, her single calm word.",
+      "Same glass elevator, same nervous young man and stern woman in the black suit. The doors open on the top floor. She steps out, stops, turns back and asks: \"How much has it paid you?\" He answers: \"More than my last job.\" She steps back into the elevator, presses the button to close the doors and says: \"Start again from the beginning.\" He grins in disbelief as the doors close. Static two-shot. Audio: the doors sliding open and closed, her heels on the floor, both voices, the elevator chime."
+    ]
+  },
+  {
+    "slug": "street-interview",
+    "model": "minimax",
+    "seconds": 15,
+    "link": true,
+    "caption": "Street interviews never lie. https://www.vweeter.com/cryptopop.html",
+    "shots": [
+      "A street interview on a crowded Hong Kong street at night, neon signs and trams behind. A young interviewer with a handheld microphone stops a man in a football shirt and asks: \"What is the dumbest thing you bought this year?\" The man thinks, winces and admits: \"A coin named after a frog.\" People passing behind them laugh. Handheld documentary style, medium two-shot. Audio: the interviewer's question, his sheepish answer, tram bells, traffic, street chatter.",
+      "Same Hong Kong street at night, same interviewer with the microphone and the same man in the football shirt. The interviewer asks: \"And the smartest?\" The man pulls out his phone and shows the screen with a bright colourful puzzle game: \"I got paid to play this.\" The interviewer slowly turns and stares straight into the camera without saying a word, holding the microphone. Handheld medium two-shot ending on the interviewer's face. Audio: both voices, cheerful game chimes from the phone, tram bells, the crowd."
+    ]
+  },
+  {
+    "slug": "time-traveller",
+    "model": "minimax",
+    "seconds": 15,
+    "link": false,
+    "caption": "The time traveller was disappointed.",
+    "shots": [
+      "A man in a scorched silver jumpsuit with wild hair stumbles out of a smoking red phone box into a quiet modern café, grabs the barista by the shoulders and shouts: \"What year is it? Did bitcoin hit a million?\" Customers stare over their laptops. The barista, a calm young woman with an apron and a nose ring, blinks at him. Handheld medium shot, smoke drifting, warm café light. Audio: the phone box hissing, his desperate shout, cups rattling, an espresso machine.",
+      "Same café, same man in the scorched silver jumpsuit and the same calm barista. She wipes the counter and says flatly: \"No. But my gran earns a bit of it playing a puzzle game.\" The man's face falls, he collapses into a chair and mutters: \"That is... actually smarter than what I did.\" The barista slides him a coffee. Static medium two-shot. Audio: her flat voice, the chair scraping, his mutter, the cup sliding across the counter, the espresso machine."
+    ]
+  },
+  {
+    "slug": "airport-gate",
+    "model": "minimax",
+    "seconds": 15,
+    "link": false,
+    "caption": "Everyone on that flight was long.",
+    "shots": [
+      "An airport departure gate, passengers queueing. A gate agent in uniform leans into the PA microphone and announces, bored: \"Attention passengers. The gentleman who just checked his portfolio in the toilet, please return to gate twelve.\" Every head in the queue turns. A man in a crumpled suit sprints out of the restroom clutching his phone, tie flying, and runs toward the gate. Wide shot of the gate, fluorescent light. Audio: the PA announcement with its echo, murmurs, his running footsteps, a suitcase wheel.",
+      "Inside the aeroplane cabin, the same man in the crumpled suit squeezes into his seat, out of breath. Every passenger around him is silently staring at their phone. The captain's voice comes over the intercom: \"Good morning. This is your captain. Bitcoin is up two percent. We are cleared for take-off.\" The whole cabin cheers and raises their phones. The man exhales and smiles. Medium shot down the aisle. Audio: seatbelt clicks, the captain's calm intercom voice, the cabin cheering, engines spooling up."
+    ]
+  },
+  {
+    "slug": "first-date",
+    "model": "minimax",
+    "seconds": 15,
+    "link": false,
+    "caption": "Found the one.",
+    "shots": [
+      "A candlelit first date in a small Italian restaurant. A woman in a green dress asks the man across the table: \"So what do you do?\" He straightens his jacket and says proudly: \"I am a professional airdrop farmer.\" Awkward silence. A waiter holding a pepper grinder freezes mid-grind beside them. Static two-shot, candlelight, soft jazz. Audio: her question, his proud answer, the pepper grinder stopping, soft restaurant jazz, a fork set down.",
+      "Same candlelit Italian restaurant, same couple and the same frozen waiter. The woman leans in and says: \"I earn bitcoin playing puzzle games on the bus.\" The man drops to one knee beside the table and holds out the breadstick like a ring: \"Marry me.\" The waiter faints backwards into a plant. She laughs and takes the breadstick. Static two-shot widening slightly. Audio: her line, his chair scraping, his proposal, the waiter thudding into the plant, her laughter, the jazz."
+    ]
+  },
+  {
+    "slug": "lie-detector",
+    "model": "minimax",
+    "seconds": 15,
+    "link": true,
+    "caption": "The polygraph is bullish on honesty. https://www.vweeter.com/bitcoin-mega-merge.html",
+    "shots": [
+      "A grey interrogation room. A sweating man in a white shirt is strapped to a polygraph machine with wires on his fingers. A stern examiner in glasses asks: \"Did you buy the top?\" The man says: \"No.\" The polygraph needles go wild, scribbling violently, paper spilling onto the floor. The examiner looks over his glasses. Static two-shot, harsh overhead light. Audio: the question, the answer, the needles scratching frantically, paper unspooling.",
+      "Same grey interrogation room, same sweating man wired to the polygraph, same examiner in glasses. The examiner asks: \"Did you enjoy losing it?\" The man pauses, then says quietly: \"Yes. It was kind of fun.\" The needles go perfectly calm and flat. The examiner slowly turns to look straight into the camera. Static two-shot ending on the examiner's face. Audio: the question, the quiet answer, the needles falling silent, the hum of the light."
+    ]
+  },
+  {
+    "slug": "office-alarm",
+    "model": "minimax",
+    "seconds": 15,
+    "link": false,
+    "caption": "The intern was the only adult in the room.",
+    "shots": [
+      "An open-plan office. A red alarm light spins and a siren blares. Everyone dives under their desks in panic, papers flying. A red-faced boss in a waistcoat runs down the aisle shouting: \"Bitcoin dropped two percent! Two percent!\" One young intern in a yellow cardigan stays calmly in her chair, feet up, playing a colourful game on her phone. Wide tracking shot down the aisle. Audio: the siren, the boss shouting, chairs toppling, cheerful game chimes from her phone.",
+      "Same open-plan office with the red alarm still spinning, same boss in the waistcoat and the same intern in the yellow cardigan playing her phone. The boss stops beside her, panting: \"Why are you so calm?\" She doesn't look up: \"I get paid in crypto whether it drops or not.\" The boss stares, then quietly sits down on the floor next to her chair and watches her play. Static medium shot. Audio: the siren winding down, his panting question, her calm answer, game chimes, the office going quiet."
+    ]
+  },
+  {
+    "slug": "fortune-teller",
+    "model": "minimax",
+    "seconds": 15,
+    "link": false,
+    "caption": "The crystal ball had a chart in it.",
+    "shots": [
+      "A dim fortune teller's tent with red drapes and candles. A young man in a hoodie sits across from an old fortune teller with rings on every finger and a crystal ball. He leans in and whispers: \"Just tell me when to sell.\" She waves her hands over the crystal ball, which glows green, then red, then green, a tiny candlestick chart flickering inside it. Static two-shot, candlelight flicker. Audio: his whisper, her bracelets jingling, a low mystical hum from the ball, a candle sputtering.",
+      "Same dim tent, same fortune teller with the crystal ball and the same young man in the hoodie. She stops, looks up at him and says: \"The ball says you already sold. At the bottom. Twice.\" He slumps. She pats the crystal ball: \"It also says your cousin earns more playing a puzzle game.\" He stands up and stomps out through the drapes. Static two-shot. Audio: her raspy voice, his groan, the drapes swishing, the mystical hum fading."
+    ]
+  },
+  {
+    "slug": "hamster-cheeks",
+    "model": "minimax",
+    "seconds": 10,
+    "link": false,
+    "caption": "Diversifying across twelve chain leaders.",
+    "shots": [
+      "A round golden hamster on a table covered in piles of different seeds and nuts stuffs its cheek pouches fuller and fuller, cheeks bulging enormously, then tries to force in one more sunflower seed which keeps popping back out. It looks at the camera with bulging cheeks. Macro close-up, soft daylight, static camera. Audio: tiny nibbling and rustling, a seed pinging off the table, a quiet squeak."
+    ]
+  }
 ]
