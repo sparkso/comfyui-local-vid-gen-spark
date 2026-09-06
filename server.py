@@ -442,7 +442,28 @@ def stitch_clips(paths, dest: Path, fade=0.12):
     return dest
 
 
+class GpuBusy(RuntimeError):
+    pass
+
+
+def assert_gpu_free():
+    """Owner rule (2026-09-06): never share the GPU. Refuse to start a render while anything is running or queued,
+    either in our own job list or in ComfyUI's queue."""
+    active = [j["id"] for j in STORE.all() if j["status"] in ACTIVE]
+    if active:
+        raise GpuBusy(f"GPU busy: job {active[0]} is {STORE.get(active[0])['status']}. One render at a time.")
+    try:
+        q = comfy_get("/queue", timeout=6).json()
+        if q.get("queue_running") or q.get("queue_pending"):
+            raise GpuBusy("GPU busy: ComfyUI already has a prompt running or queued. One render at a time.")
+    except GpuBusy:
+        raise
+    except Exception:
+        pass  # unreachable ComfyUI is reported by the submit itself
+
+
 def submit_job(params, image_path=None, extra=None):
+    assert_gpu_free()
     mode = params["mode"]
     if mode not in workflows.PRESETS:
         raise ValueError("unknown mode")
@@ -544,14 +565,12 @@ def api_submit():
             ext = Path(up.filename).suffix.lower() or ".png"
             image_path = UPLOADS / f"{uuid.uuid4().hex[:10]}{ext}"
             up.save(image_path)
-        count = max(1, min(8, int(f.get("count", 1))))
-        jobs = []
-        for i in range(count):
-            p = dict(params, seed=params["seed"] + i)
-            jobs.append(submit_job(p, image_path))
-        return jsonify(jobs)
+        # One render at a time (owner rule): batches are not queued up front any more.
+        return jsonify([submit_job(params, image_path)])
     except (KeyError, ValueError) as e:
         return jsonify({"error": f"bad request: {e}"}), 400
+    except GpuBusy as e:
+        return jsonify({"error": str(e)}), 409
     except requests.RequestException as e:
         return jsonify({"error": f"White-PC unreachable: {e}"}), 502
     except RuntimeError as e:
@@ -582,6 +601,7 @@ def api_r2v():
                 names[key].append(comfy_upload_file(local))
         if not any(names.values()):
             return jsonify({"error": "add at least one reference image, video or audio"}), 400
+        assert_gpu_free()
         job_id = datetime.now().strftime("%Y%m%d-%H%M%S") + "-r2v" + uuid.uuid4().hex[:2]
         graph = workflows.build_minimax_r2v(prompt, width, height, frames, seed, turbo=turbo,
                                             ref_image_size=f.get("ref_image_size", "match"),
@@ -590,6 +610,8 @@ def api_r2v():
         prompt_id = comfy_submit(graph)
     except (KeyError, ValueError) as e:
         return jsonify({"error": f"bad request: {e}"}), 400
+    except GpuBusy as e:
+        return jsonify({"error": str(e)}), 409
     except (requests.RequestException, RuntimeError) as e:
         return jsonify({"error": str(e)}), 502
     job = {"id": job_id, "prompt_id": prompt_id, "status": "queued", "created_at": now_iso(),
@@ -615,6 +637,8 @@ def api_rerun(job_id):
             return jsonify({"error": "original upload no longer on disk"}), 400
     try:
         return jsonify(submit_job(params, image_path))
+    except GpuBusy as e:
+        return jsonify({"error": str(e)}), 409
     except (requests.RequestException, RuntimeError, ValueError) as e:
         return jsonify({"error": str(e)}), 502
 
@@ -643,6 +667,8 @@ def api_extend(job_id):
     }
     try:
         job = submit_job(params, frame, extra={"parent": job_id, "chain_index": (parent.get("chain_index") or 0) + 1})
+    except GpuBusy as e:
+        return jsonify({"error": str(e)}), 409
     except (requests.RequestException, RuntimeError, ValueError) as e:
         return jsonify({"error": str(e)}), 502
     return jsonify(job)
@@ -679,12 +705,15 @@ def api_faceswap(job_id):
         return jsonify({"error": "no reference face: upload one"}), 400
     restore = (request.form.get("restore", "1") != "0")
     try:
+        assert_gpu_free()
         video_name = comfy_upload_file(OUTPUTS / parent["file"])
         face_name = comfy_upload_image(face_path)
         job_id_new = datetime.now().strftime("%Y%m%d-%H%M%S") + "-fs" + uuid.uuid4().hex[:2]
         graph = workflows.build_faceswap(video_name, face_name, restore=restore,
                                          filename_prefix=f"video/localvidgen/{job_id_new}")
         prompt_id = comfy_submit(graph)
+    except GpuBusy as e:
+        return jsonify({"error": str(e)}), 409
     except (requests.RequestException, RuntimeError) as e:
         return jsonify({"error": str(e)}), 502
     job = {

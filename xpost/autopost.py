@@ -318,6 +318,11 @@ def main():
         if not wake_whitepc() and not whitepc_online():
             telegram(s["tg"], "xpost: White-PC is offline and did not wake; skipping this hour's render.")
             return 0
+    # Owner rule: never share the GPU. If anything is rendering, this hour is skipped, not queued.
+    st_code, status = http(f"{DASH}/api/status", timeout=15)
+    if st_code == 200 and (status.get("queue_running") or status.get("queue_pending")):
+        log("GPU busy (another render in progress); skipping this hour's render")
+        return 0
     try:
         job_id, filename = render(idea)
         media_url, size = fetch_and_host(job_id, filename)
